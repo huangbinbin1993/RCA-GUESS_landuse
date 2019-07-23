@@ -1,0 +1,41 @@
+
+OPT := -O0 
+DBG := #-g
+        
+CC      := mpicc 
+CCFLAGS := $(OPT) $(DBG) $(DEFINITIONS)   -traceback
+
+CXX     := mpiCC 
+CXXFLAGS := $(OPT) $(DBG) $(DEFINITIONS) -traceback
+
+FC := mpif90 
+FDBG :=   $(DBG) -traceback #-warn all -CB -warn errors -implicitnone -debug  -check bounds -CU -warn declarations -check all -fp-stack-check -ftrapuv -check all
+FHACKS :=  #-fltconsistency #-mp1 -mieee-fp -prec-sqrt -prec-div -fp-port -fltconsistency #-mp #-gen-interfaces #-fp-model strict  #-gen-interfaces 
+
+FINCLUDE := -I$(ROOTDIR)/$(ARCH)/rcamod  -I$(ROOTDIR)/include/ 
+
+ifeq (USING_NETCDF,$(findstring USING_NETCDF,$(DEFINITIONS)))
+    NETCDFPATH :=/pdc/vol/netcdf/4.0.1
+    FINCLUDE += -I$(NETCDFPATH)/include/
+endif
+
+FCFLAGS := $(OPT) $(FDBG) $(FHACKS) $(DEFINITIONS)  $(FINCLUDE) 
+
+MODNAME = $(shell echo $(*F) | tr "[:upper:]" "[:lower:]")
+MODEXT := mod
+
+LD          := $(FC)
+LD_MPP      :=   -L /usr/lib/gcc/x86_64-redhat-linux/4.1.2 -lstdc++ 
+
+ifeq (USING_NETCDF,$(findstring USING_NETCDF,$(DEFINITIONS)))
+	LD_MPP += -L$(NETCDFPATH)/lib -lnetcdff -lnetcdf -Wl,-rpath,$(NETCDFPATH)/lib
+endif
+
+AR      := ftn
+ARFLAGS := rv
+MV      := mv
+RM      := rm -f
+MKDIR   := mkdir
+RMDIR   := rmdir
+
+

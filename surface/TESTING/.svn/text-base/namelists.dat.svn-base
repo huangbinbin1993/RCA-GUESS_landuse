@@ -1,0 +1,301 @@
+&domain
+klon_global = 126
+klat_global = 126
+klev_global = 40
+south = -27.61000000
+west = -32.61000000
+dlon =   0.44000000
+dlat =   0.44000000
+polon =  18.00000000
+polat = -39.25000000
+/
+
+&nampos
+nppstr = 5
+lunlis= 57
+lundip= 71
+lposton=.false. 
+lprint=.false.
+iprint= 10
+jprint= 10
+lomega=.true.
+hisnam='fc'
+ntimep=1
+npplon=106
+npplat=103
+iminpp=11
+jminpp=11
+/
+
+ &namprc
+    iacdg2=13
+    nhorph=901
+    ksvar=1
+    lserial=.false.
+ /
+
+&scenario
+/
+
+&namphys
+/
+
+&namconfig
+/
+&namrouting
+routing_path
+klon_bound
+klat_bound
+ntile
+dimstate
+acctime
+/
+ &namdev
+      lusfil= 91
+ /
+
+
+ &naminterp
+      num_srffld=15
+      lun_srffld=77
+      lprinteta = .false.
+      par_srffld=006,011,011,011,086,086,086,011,081,091,084,083,066,197,083
+      lev_srffld=000,000,999,998,000,999,998,000,000,000,000,000,000,000,000
+      ltp_srffld=105,105,105,105,105,105,105,102,105,102,105,105,105,105,102
+      lecmwf=.true.
+ /
+
+ &namrestart
+      nlrestart=.true.
+      nstart1=0
+      nstop1=1145040
+      nut1=10000000
+      reyear=1989
+      remonth=02
+      reday=01
+      rehour=00
+ /
+
+&namdiffh
+      nlhdif=.false.
+      ak4=2.1482012e14
+      ak4levin= 40*1.0,40*1.0,40*1.0,40*1.0,40*0.0,
+
+/
+
+&namsl
+  nslpqi= 1
+  nslinc= 4
+  nslind= 4
+  nslint= 4,3,2,1,1,2,3
+  nslext= 2
+  dynamic_halo=.true.
+/
+
+ &namrun
+      nstop = 2
+      ndtime=1200
+      nbdpts= 8
+      nlpwei=.false.
+      nlsimp=.true.
+      nlphys=.true.
+      sip0=101320.0
+      nltvir=.true.
+      nlhumc=.true.
+      nlstat=.true.
+      nltcrf=.true.
+      noption=1,4,2,1,16*0
+      timesu=3599.0
+      nldynvd=.true.
+      nwmosvin=200
+      nlusug=.false.
+ /
+
+ &namtun
+      acrit  = 1.00
+      acrtun = 0.95
+      alspbl = 300.0
+      alsmin = 30.0
+      hgtmix = 1000.0
+      assat  = 0.02
+      roumin = 1.50
+      tseafr = 271.15
+      sncrt  = 0.015
+      wsmax  = 0.020
+      emsurf = 0.95
+      csecur = 1.e-10
+ /
+
+
+ &namppp
+      lunarcp=-1
+      lunppfp=801
+      lintypp='L'
+      prefixp='fc'
+      sufixp='pp'
+      timeppp=21600
+      nlevmlp=6
+      ltypmlp=100
+      alevmlp=20000.,30000.,50000.,70000.,85000.,92500.
+      nwmomlp=6
+      iwmomlp=006,011,033,034,039,052
+      nslp=28
+      iwmoslp=  11, 90
+      ltypslp= 102,105
+      alevslp=  0., 4006.
+      iwmoslp(3)=111,112,113,114,115,116,117
+      ltypslp(3)=105,105,105,105,105,105,105
+      alevslp(3)= 3006.,3006.,3006.,3006.,3006.,3006.,3006.
+      iwmoslp(10)=   54,   58, 73, 74, 75, 76
+      ltypslp(10)=  105,  105,105,105,105,105
+      alevslp(10)=3006.,3006., 0., 0., 0.,3006.
+      iwmoslp(16)=242,242,242,242
+      ltypslp(16)=105,105,105,105
+      alevslp(16)=31.,25.,49.,66.
+      iwmoslp(20)=250,250,250
+      ltypslp(20)=105,105,105
+      alevslp(20)=59.,68.,91.
+      iwmoslp(23)=252,252,252,252,252,252
+      ltypslp(23)=105,105,105,105,105,105
+      alevslp(23)=44.,45.,46.,47.,48.,49.
+ /
+
+ &namppp
+      lunarcp=-1
+      lunppfp=802
+      lintypp='L'
+      prefixp='fc'
+      sufixp='dd'
+      timeppp=86400.
+      nlevmlp=0
+      ltypmlp=100
+      nwmomlp=0
+      nslp=44
+      iwmoslp= 91, 92,240, 15, 16, 15 ,16
+      ltypslp=102,102,105,105,105,105,105
+      alevslp= 0., 0.,4006.,2., 2., 0., 0.
+      iwmoslp(8)=11,  11
+      ltypslp(8)=105, 105
+      alevslp(8)=999.,998.
+      iwmoslp(10)=250,250,250,250,250,250,250,250
+      ltypslp(10)=105,105,105,105,105,105,105,105
+      alevslp(10)=53.,54.,73.,78.,79.,80.,100.,101.
+      iwmoslp(18)=242,242,242,242,242,242
+      ltypslp(18)=105,105,105,105,105,105
+      alevslp(18)=89.,95.,96.,97.,98.,99.
+      iwmoslp(24)=252,252,252,252
+      ltypslp(24)=105,105,105,105
+      alevslp(24)= 8., 9.,11.,18.
+      iwmoslp(28)=241,241,239,244,244,244,250,244,244,244
+      ltypslp(28)=105,105,102,105,105,105,105,105,105,105
+      alevslp(28)=19.,20.,0.,14.,29.,44.,51.,15.,30.,45.
+      iwmoslp(38)=81,250,250,250,250
+      ltypslp(38)=105,105,105,105,105
+      alevslp(38)= 0.,56.,57.,58.,103.
+      iwmoslp(43)=241,241
+      ltypslp(43)=105,105
+      alevslp(43)= 1.,2.
+ /
+
+ &namppp
+      lunarcp=-1
+      lunppfp=804
+      lintypp='L'
+      prefixp='fc'
+      sufixp='qq'
+      timeppp=10800.
+      nlevmlp=0
+      ltypmlp=100
+      nwmomlp=0
+      nslp=36
+      iwmoslp=  1,32,   62,   63, 67, 71,242,250,250,250
+      ltypslp=103,105,105,105, 105,  105,105,105,105,105
+      alevslp=  0.,10.,4006.,4006., 0., 0.,67.,1.,7.,83.
+      iwmoslp(11)=250,250,250,250,250,250,250,250
+      ltypslp(11)=105,105,105,105,105,105,105,105
+      alevslp(11)= 3., 4., 5., 6.,  9.,10.,11.,12.
+      iwmoslp(19)=250,250,250,250,250,250,250,250,250,250
+      ltypslp(19)=105,105,105,105,105,105,105,105,105,105
+      alevslp(19)=15.,17.,18.,21.,23.,24.,69.,74.,13.,19.
+      iwmoslp(29)=241,241,241,241,241
+      ltypslp(29)=105,105,105,105,105
+      alevslp(29)=14.,18.,21.,22.,23.
+      iwmoslp(34)=250,250,250
+      ltypslp(34)=105,105,105
+      alevslp(34)= 107.,108.,109.
+ /
+
+
+ &namppp
+      lunarcp=-1
+      lunppfp=805
+      lintypp='L'
+      prefixp='fc'
+      sufixp='ss'
+      timeppp=1800
+      nlevmlp=0
+      ltypmlp=100
+      nwmomlp=0
+      nslp=9
+      iwmoslp=   33,   34,   11,   51 ,115,116, 61, 65,  1
+      ltypslp=  109,  109,  109,  109, 105,105,105,105,105
+      alevslp=40,40,40,40,  0., 0., 0., 0., 0.
+ /
+
+
+ &namppp
+      lunarcp=-1
+      lunppfp=803
+      lintypp='L'
+      prefixp='cl'
+      sufixp='gb'
+      timeppp=9999999999
+      nlevmlp=0
+      nslp=45
+      iwmoslp=   6,   9
+      ltypslp= 105, 105
+      alevslp=  0.,  0.
+      iwmoslp(3)=246, 246, 246, 246, 246, 246, 246, 246, 246, 246
+      ltypslp(3)=105, 105, 105, 105, 105, 105, 105, 105, 105, 105
+      alevslp(3)= 1.,  2.,  3.,  4.,  5.,  6.,  7.,  8.,  9., 10.
+      iwmoslp(13)=246, 246, 246, 246, 246, 246, 246, 246, 246, 246
+      ltypslp(13)=105, 105, 105, 105, 105, 105, 105, 105, 105, 105
+      alevslp(13)=11., 12., 13., 14., 15., 16., 17., 18., 19., 20.
+      iwmoslp(23)=246, 246, 246, 246, 246, 246, 246, 246, 246, 246
+      ltypslp(23)=105, 105, 105, 105, 105, 105, 105, 105, 105, 105
+      alevslp(23)=21., 22., 23., 24., 25., 26., 27., 28., 29., 30.
+      iwmoslp(33)=246, 246, 246, 246, 246, 246, 246, 246, 246, 246
+      ltypslp(33)=105, 105, 105, 105, 105, 105, 105, 105, 105, 105
+      alevslp(33)=31., 32., 33., 34., 35., 36., 37., 38., 39., 40.
+      iwmoslp(43)=246, 246, 246
+      ltypslp(43)=105, 105, 105
+      alevslp(43)=41., 42., 43.
+ /
+
+
+
+&gtopo30
+	gtopo30_path='/nobackup/rossby10/sm_marku/gtopo30/'
+/
+&ecoclimap
+	ecopath='/nobackup/rossby14/sm_psamu/ECOCLIMAP/RUN/GLOBAL_001'
+/
+&lake
+	lake_path='/nobackup/rossby4/sm_psamu/LAKE_DATA_BASE/full_lake2_eco/res/'
+/
+&ecice
+        ecice_path='/nobackup/rossby1/sm_aulle/DATA/ecmwf/tice_ASIM/'
+/
+&global_clim
+        global_clim_path='/nobackup/rossby1/sm_aulle/DATA/ecmwf/climLL1.0_ASIM/'
+/
+&climyears
+        climyears_path='/nobackup/rossby1/sm_aulle/DATA/ecmwf/clim'
+/
+&bound
+	!bound_path='/nobackup/rossby4/sm_aulle/ERA40/bound_global/ma'
+	bound_path='/nobackup/rossby13/sm_aulle/monolith/sm_aulle/ERA40_INTERIM/ma'
+/
+ &namtsf
+ /
+

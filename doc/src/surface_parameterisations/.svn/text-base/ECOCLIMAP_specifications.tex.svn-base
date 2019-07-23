@@ -1,0 +1,94 @@
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{table}[h]
+\caption{ECOCLIMAP parameters}
+\begin{center}
+\begin{footnotesize}
+\begin{tabular}{llrl}
+\hline
+Variable		& Description					& nn	& ECOCLIMAP file \\
+\hline
+\hline
+     \verb+lai_t1+	&  LAI open land				& 1	&	\verb+time_of_year( lai.time.t01.NSCALE )+	\\
+     \verb+lai_t2+	&  LAI conif forest				& 2	&	\verb+time_of_year( lai.time.t02.NSCALE )+	\\
+     \verb+lai_t3+	&  LAI broad-leaf forest			& 3	&	\verb+time_of_year( lai.time.t03.NSCALE )+	\\
+     \verb+z0_t1+	&  roughness length open land			& 4	&	\verb+time_of_year( z0.time.t01.NSCALE )+	\\
+     \verb+z0_t2+	&  roughness length conif forest		& 5	&	\verb+time_of_year( z0.time.t02.NSCALE )+	\\
+     \verb+z0_t3+	&  roughness length broad-leaf forest		& 6	&	\verb+time_of_year( z0.time.t03.NSCALE )+	\\
+     \verb+emis_t1+	&  emissivity open land				& 7	&	\verb+time_of_year( emis.time.t01.NSCALE )+	\\
+     \verb+alb_t1+	&  albedo open land				& 8	&	\verb+time_of_year( alb.time.t01.NSCALE )+	\\
+     \verb+veg_t1+	&  vegetation cover open land			& 9	&	\verb+time_of_year( veg.time.t01.NSCALE )+	\\
+     \verb+frland+	&  fraction land				& 10	&	\verb+1 - F_wat.NSCALE+				\\
+     \verb+alb_soil+	&  albedo of bare soil				& 11	&	\verb+albedo_soil.NSCALE+			\\
+     \verb+clay+	&  percentage of clay				& 12	&	\verb+clay.NSCALE+				\\
+     \verb+sand+	&  percentage of sand				& 13	&	\verb+sand.NSCALE+				\\
+     \verb+frac_t1+	&  fraction open land				& 14	&	\verb+frac_tile01.NSCALE+			\\
+     \verb+frac_t2+	&  fraction conif forest			& 15	&	\verb+frac_tile02.NSCALE+			\\
+     \verb+frac_t3+	&  fraction broad-leaf forest			& 16	&	\verb+frac_tile03.NSCALE+			\\
+     \verb+alb_t2+	&  albedo conif forest				& 17	&	\verb+alb.07.t02.NSCALE+				\\
+     \verb+alb_t3+	&  albedo broad-leaf forest			& 18	&	\verb+alb.07.t03.NSCALE+				\\
+     \verb+emis_t2+	&  emissivity conif forest			& 19	&	\verb+emis.07.t02.NSCALE+			\\
+     \verb+emis_t3+	&  emissivity broad-leaf forest			& 20	&	\verb+emis.07.t03.NSCALE+			\\
+     \verb+veg_t2+	&  vegetation cover conif forest		& 21	&	\verb+veg.07.t02.NSCALE+				\\
+     \verb+veg_t3+	&  vegetation cover broad-leaf forest		& 22	&	\verb+veg.07.t03.NSCALE+				\\
+     \verb+droot_t1+	&  root depth open land				& 23	&	\verb+d_root.t01.NSCALE+				\\
+     \verb+droot_t2+	&  root depth conif forest			& 24	&	\verb+d_root.t02.NSCALE+				\\
+     \verb+droot_t3+	&  root depth broad-leaf forest			& 25	&	\verb+d_root.t03.NSCALE+				\\
+     \verb+dsoil_t1+	&  soil depth open land				& 26	&	\verb+d_soil.t01.NSCALE+				\\
+     \verb+dsoil_t2+	&  soil depth conif forest			& 27	&	\verb+d_soil.t02.NSCALE+				\\
+     \verb+dsoil_t3+	&  soil depth broad-leaf forest			& 28	&	\verb+d_soil.t03.NSCALE+				\\
+     \verb+rsmin_t1+	&  minimum surface resistance open land		& 29	&	\verb+rsmin.t01.NSCALE+				\\
+     \verb+rsmin_t2+	&  minimum surface resistance conif forest	& 30	&	\verb+rsmin.t02.NSCALE+				\\
+     \verb+rsmin_t3+ 	&  minimum surface resistance			& 31	&	\verb+rsmin.t03.NSCALE+				\\
+     \verb+alb_veg_t1+	&  albedo vegetation open land			& 32	&	\verb+albedo_veg.t01.NSCALE+			\\
+     \verb+alb_veg_t2+	&  albedo vegetation conif forest		& 33	&	\verb+albedo_veg.t02.NSCALE+			\\
+     \verb+alb_veg_t3+	&  albedo vegetation				& 34	&	\verb+albedo_veg.t03.NSCALE+			\\
+     \verb+texture+	&  texture according to texture triangle	& 35  	&	Processed info see "Texture" below		\\
+     \verb+minlai_t1+	&  annual min of LAI open land			& 36	&	\verb+min( lai.time.t01.NSCALE )+		\\
+     \verb+minlai_t2+	&  annual min of LAI conif forest		& 37	&	\verb+min( lai.time.t02.NSCALE )+		\\
+     \verb+minlai_t3+	&  annual min of LAI broad-leaf forest		& 38	&	\verb+min( lai.time.t03.NSCALE )+		\\
+     \verb+maxlai_t1+	&  annual max of LAI open land			& 39	&	\verb+max( lai.time.t01.NSCALE )+		\\
+     \verb+maxlai_t2+	&  annual max of LAI conif forest		& 40	&	\verb+max( lai.time.t02.NSCALE )+		\\
+     \verb+maxlai_t3+	&  annual max of LAI broad-leaf forest		& 41	&	\verb+max( lai.time.t03.NSCALE )+		\\
+     \verb+frac_lake+	&  fraction of lake				& 42	&	\verb+F_lake.NSCALE+				\\
+     \verb+soil_carb+	&  soil carbon                                 	& 43 	&	\verb+soil_carb.NSCALE+				\\
+\hline
+\end{tabular}
+\end{footnotesize}
+\end{center}
+\label{ECOCLIMAPparameters}
+\end{table}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{table}[h]
+\caption{Soil texture classes}
+\begin{center}
+\begin{footnotesize}
+\begin{tabular}{llccccccc}
+\hline
+{\bf Number}	& {\bf Texture class}	& $\theta_{sat}$	& $\theta_{fc}$		& $\theta_{wi}$		& $\psi_{sat}$	& $\gamma_{sat}$	& $b$	& $cq$	\\
+		&			& (m$^{3}$m$^{-3}$)	& (m$^{3}$m$^{-3}$)	& (m$^{3}$m$^{-3}$)	& (m)		& (m s$^{-1}$)		& (-)	& (-) \\
+\hline
+\hline
+1 & silty loam & 0.485 & 0.369 & 0.179 & 0.786 & 7.2 & 5.3 & 0.25 \\
+2 & sand & 0.395 & 0.174 & 0.068 & 0.121 & 176 & 4.05 & 0.92 \\
+3 & silty clay loam & 0.477 & 0.357 & 0.218 & 0.356 & 1.7 & 7.75 & 0.1 \\
+4 & loam & 0.451 & 0.314 & 0.155 & 0.478 & 6.95 & 5.39 & 0.4 \\
+5 & clay loam & 0.476 & 0.391 & 0.25 & 0.63 & 2.45 & 8.52 & 0.35 \\
+6 & sandy loam & 0.435 & 0.249 & 0.114 & 0.218 & 34.7 & 4.9 & 0.6 \\
+7 & silty clay & 0.492 & 0.409 & 0.283 & 0.49 & 1.03 & 10.4 & 0.1 \\
+8 & sandy clay loam & 0.42 & 0.299 & 0.175 & 0.299 & 6.3 & 7.12 & 0.6 \\
+9 & loamy sand & 0.41 & 0.179 & 0.075 & 0.09 & 156 & 4.38 & 0.82 \\
+10 & clay & 0.482 & 0.4 & 0.286 & 0.405 & 1.28 & 11.4 & 0.25 \\
+11 & silt & 0.485 & 0.369 & 0.179 & 0.786 & 7.2 & 5.3 & 0.1 \\
+12 & sandy clay & 0.426 & 0.316 & 0.219 & 0.153 & 2.17 & 10.4 & 0.52 \\
+\hline
+\end{tabular}
+\end{footnotesize}
+\end{center}
+\label{textureclasses}
+\end{table}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+

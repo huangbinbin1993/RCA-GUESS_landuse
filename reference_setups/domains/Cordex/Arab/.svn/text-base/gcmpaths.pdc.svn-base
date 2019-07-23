@@ -1,0 +1,21 @@
+&gtopo30
+        gtopo30_path='/afs/pdc.kth.se/home/d/doesc/Public/data/rca4data/gtopo30/'
+/
+&ecoclimap
+        ecopath='/cfs/ekman/nobackup/d/doesc/ECOCLIMAP/RUN/GLOBAL_001'
+/
+&ecice
+        ecice_path='/cfs/ekman/nobackup/m/mkolax/rossby/boundary/ECMWF/ERA-INTERIM/0_75/6hr'
+/
+&global_clim
+        global_clim_path='/afs/pdc.kth.se/home/d/doesc/Public/data/rca4data/climLL1.0_ASIM/'
+/
+&climyears
+        climyears_path='/cfs/ekman/nobackup/a/aulle/DATA/clim'
+/
+&bound
+	bound_path='/cfs/ekman/nobackup/m/mkolax/rossby/boundary/ECMWF/ERA-INTERIM/0_75/6hr/ma'
+/
+&ghg
+	ghg_path='/cfs/ekman/nobackup/s/smuhans/DATA/GHGfiles'
+/

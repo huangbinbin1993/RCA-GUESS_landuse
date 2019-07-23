@@ -1,0 +1,9 @@
+#!/bin/bash
+
+file1=$1
+file2=$2
+restart_year=$3
+outfile=$4
+
+awk 'NR == 1 || $4 < '$restart_year'{print}' $file1 > $outfile
+awk 'NR > 1 {print}' $file2 >> $outfile

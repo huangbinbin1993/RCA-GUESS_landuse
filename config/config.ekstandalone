@@ -1,0 +1,58 @@
+
+OPT := -O2 -g -traceback -vec-report0 -r8
+
+OASIS_MPI_CHAN          := MPI1
+
+#OASROOT     := /afs/pdc.kth.se/home/d/doesc/Public/data/rcao_a/rca/RCA4_RCO/oasis3/ekman/build
+
+# XML library
+XML_INCLUDE := /usr/include/libxml2
+LIBXML      := -L/usr/lib64/ -lxml2
+
+#NETCDF library
+#LIBNETCDF := -L/pdc/vol/netcdf/3.6.3/intel/lib/ -lnetcdf
+
+#LIBPSMILE := -L/afs/pdc.kth.se/home/d/doesc/Public/data/rcao_a/rca/RCA4_RCO/oasis3/ekman/lib -lpsmile.MPI1 -lmpp_io
+#LIBPSMILE2 := -I$(OASROOT)/lib/psmile.$(OASIS_MPI_CHAN) -I$(OASROOT)/lib/mpp_io
+
+
+CC      := mpicc -ccl=icc 
+CCFLAGS := $(OPT) $(DBG) $(DEFINITIONS)   -strict-ansi
+
+CXX     := mpicc -ccl=icc 
+CXXFLAGS := $(OPT) $(DBG) $(DEFINITIONS)   -strict-ansi
+
+FC := mpif90 -ccl=ifort 
+
+FDBG := $(DBG) -traceback 
+
+FHACKS :=  -fp-speculation=safe -fp-model precise 
+#FHACKS :=   -fp-model strict -fltconsistency
+#FHACKS :=    -fltconsistency
+FINCLUDE := -I$(ROOTDIR)/$(ARCH)/rcamod  -I$(ROOTDIR)/include/ 
+
+ifeq (USING_NETCDF,$(findstring USING_NETCDF,$(DEFINITIONS)))
+    NETCDFPATH :=/pdc/vol/netcdf/4.0.1
+    FINCLUDE += -I$(NETCDFPATH)/include/
+endif
+
+FCFLAGS := $(OPT) $(FDBG) $(FHACKS) $(DEFINITIONS) $(FINCLUDE) $(TRACE) 
+
+# xlf (IBM/AIX), ifort (Intel/Linux) (and others) always produce a lower-case module name
+MODNAME = $(shell echo $(*F) | tr "[:upper:]" "[:lower:]")
+MODEXT := mod
+
+LD          := $(FC) $(DBG)
+LD_MPP      :=  -L /usr/lib/gcc/x86_64-redhat-linux/4.1.2 -lstdc++    $(NCDF)
+
+ifeq (USING_NETCDF,$(findstring USING_NETCDF,$(DEFINITIONS)))
+	LD_MPP +=-L$(NETCDFPATH)/lib  -lnetcdf -Wl,-rpath,$(NETCDFPATH)/lib -L/pdc/vol/hdf5/1.8.3/lib -Wl,-rpath,/pdc/vol/hdf5/1.8.3/lib -lhdf5 -lhdf5_hl -L/pdc/vol/szip/2.1/lib -Wl,-rpath,/pdc/vol/szip/2.1/lib -lsz -L/pdc/vol/zlib/1.2.3/lib -lz -Wl,-rpath,/pdc/vol/zlib/1.2.3/lib
+
+endif
+
+AR      := xiar
+ARFLAGS := rv
+MV      := mv
+RM      := rm -f
+MKDIR   := mkdir
+RMDIR   := rmdir

@@ -1,0 +1,535 @@
+  subroutine calctemps(nhor,kstart,kstop,              &
+       monthc,dayc,hourc,minc,secc,                     &
+       along,coslat,sinlat,                             &
+       tsns,tc,tsc,tsnow,tsea,tice,tsnice,              &
+       snopl,snfor,snice,                            &
+       snmax,snmaxf,snmaxice,                           &
+       frice,frland,frfor,                              &
+       orosigm,lcounttice,albsnowl,                     &
+       albsnice,albicenl,                               &
+       lai_conif,lai_decid,vegopl,cov2d,                &
+       frdecid,   &
+       alb_t1,alb_t2,alb_t3,                            &
+       emis_t1,emis_t2,emis_t3,                         &
+       soiltype,  &
+       tsnc,      &
+       tlakesfc, frlake, sndepthlake, icedepthlake,     & 
+       frop,frcw,frsnw,                                 &
+       frsn,frsnfor,frsnice,                            &
+       albedo,scos,tskin,emskin)
+    !     
+    !     wjb  091009     revision of the snowmass tresholds, changed from mass per gridbox to mass per m2
+    !     calculate tskin = 4:th power weighting of surface temperatures, used in 
+    !     radiation
+    !     
+    !     the different fractions are passed to slfluxo_land and  slfluxo_sea_ice
+    !     albedo is an are weighted albedo and scos is cosine for solar zenith angle
+    !     
+    !----------------------------------------------------------------------
+
+    use comrpar
+    use flake, only: nlaketype,           &! number of lake types
+         fraclakemin,       & ! minimum lake fraction to be taken into account
+         h_snow_min_flk,    &  ! minimum snow thickness [m] - from flake
+         h_ice_min_flk,  &       ! minimum ice thickness [m] - from flake
+         albedo_whiteice_ref,& ! white ice albedo
+         albedo_blueice_ref, & ! blue ice albedo
+         c_albice_mr          ! constant in the interpolation formula for the ice albedo
+
+
+!!$    use rcaflakeconst, only : &! kk0405:
+!!$         nlaketype,           &! number of lake types
+!!$         fraclakemin,       & ! minimum lake fraction to be taken into account
+!!$         h_snow_min_flk,    &  ! minimum snow thickness [m] - from flake
+!!$         h_ice_min_flk        ! minimum ice thickness [m] - from flake
+!!$
+!!$    !     kk 19.11.2005
+!!$    use flake_albedo_ref,only :&! values of albedo for the lake ice, sd, 03.18.2005
+!!$         albedo_whiteice_ref,& ! white ice albedo
+!!$         albedo_blueice_ref, & ! blue ice albedo
+!!$         c_albice_mr          ! constant in the interpolation formula for the ice albedo
+
+    use confys
+    use config
+    implicit none
+    integer:: nhor,kstart,kstop,monthc,dayc,jl
+    integer::  hourc,minc,secc
+    real(kind=realkind)       zlaifor_int,zlai_conif
+    real(kind=realkind) lai_conif(nhor),lai_decid(nhor),vegopl(nhor),cov2d(nhor)
+    real(kind=realkind),intent(in):: tsns(nhor)
+    real(kind=realkind)::tc(nhor),tsnow(nhor),tsea(nhor),               &
+         tice(nhor),snopl(nhor),albedo(nhor),              &
+         snmax(nhor),frice(nhor),frland(nhor),frfor(nhor),          &
+         frsn(nhor),snfor(nhor),snmaxf(nhor),                       &
+         tskin(nhor),frsnfor(nhor),albsnowl(nhor),                  &
+         albicenl(nhor),tsc(nhor),frop(nhor),frcw(nhor),frsnw(nhor),&
+         emskin(nhor)
+    real(kind=realkind) scos(nhor),along(nhor),coslat(nhor),sinlat(nhor)
+    real(kind=realkind) frdecid(nhor),alb_t1(nhor),alb_t2(nhor),alb_t3(nhor),&
+         emis_t1(nhor),emis_t2(nhor),emis_t3(nhor),soiltype(nhor)
+    real(kind=realkind) tsnc(nhor)
+    !     
+    real(kind=realkind)     rzsnoplmu, rzsnformu
+    logical  loldlim
+    !     lakes - kk0405
+    real(kind=realkind), dimension(nhor, nlaketype), intent (in) :: tlakesfc, frlake &
+         , sndepthlake, icedepthlake
+    !     lakes kk0405
+    integer ilaketype         ! loop index
+
+    real(kind=realkind) zlakewateron, zlakewateroff, &!switches
+         zlakeiceon, zlakeiceoff, &
+         zlakesnowon, zlakesnowoff
+
+    real(kind=realkind), dimension(nlaketype) :: zalblake, zemislake
+    real(kind=realkind) zalblakeweight, zemislakeweight, ztlake4weight
+
+    real(kind=realkind) zalbicenew,zalbice0  ! kk 19.10.2005
+    real(kind=realkind) tsnice(nhor),frsnice(nhor),snice(nhor),snmaxice(nhor),albsnice(nhor)
+    real(kind=realkind) zsnice,zfrsnice,zt4isn
+    real(kind=realkind) zfrlim,zsnlim,zlandon,zlandoff,zt4,zt4i,zt4s,zfrfor,zfropl, &
+         zfrsn,zcw,zsnw,zslask,zsn0,zalbice,cosmin,zfrsnfor,     &
+         zalbland,zalbsea,zday,zdec,cosd,sind,zutc,zcos,zhrang,       &
+         zfrop,zviewfl,zviewfs,                          &
+         zemland,zemsea,zemopl,zalbfor,zemfor,                        &
+         zemsnowl,              &
+         zx0,zfact,zxm,zacof
+    real(kind=realkind) zalbopl,zemsoil,zalbsoil
+    !     
+    real(kind=realkind) zalat,zsfdist,zfrsnasymp,zsnl,zcwinv,zcwdinv, zsnopl,zsnfor
+    logical lprint
+    real(kind=realkind),intent(in):: lcounttice(nhor)
+    real(kind=realkind)::		orosigm(nhor)
+    !     
+    !     table for diffuse radiation/global radiation as a function of 
+    !     solar elevation, tomas persson, personal comm.
+    !     
+    real(kind=realkind) zsolar,zgldiffuse
+    real(kind=realkind) globtab(0:90)
+    data globtab/1.0_realkind,0.851_realkind,0.712_realkind,0.589_realkind,&
+         0.490_realkind,0.421_realkind,0.384_realkind,        &
+         0.356_realkind,0.331_realkind,0.311_realkind,&
+         0.295_realkind,0.281_realkind,0.266_realkind,0.252_realkind,&
+         0.240_realkind,0.230_realkind,0.222_realkind,0.215_realkind,0.208_realkind,  &
+         0.201_realkind,0.195_realkind,0.189_realkind,0.183_realkind,&
+         0.177_realkind,0.171_realkind,0.166_realkind,0.160_realkind,0.155_realkind,  &
+         0.151_realkind,0.148_realkind,0.145_realkind,0.143_realkind,&
+         0.141_realkind,0.139_realkind,0.137_realkind,0.134_realkind,0.132_realkind,  &
+         0.131_realkind,0.129_realkind,0.127_realkind,0.125_realkind,&
+         0.123_realkind,0.121_realkind,0.120_realkind,0.118_realkind,0.117_realkind,  &
+         0.115_realkind,0.114_realkind,0.112_realkind,0.111_realkind,&
+         0.110_realkind,0.109_realkind,0.108_realkind,0.107_realkind,0.105_realkind,  &
+         0.104_realkind,0.103_realkind,0.102_realkind,0.101_realkind,32*0.1_realkind/
+
+
+
+    !     constants
+    !     
+    zfrlim=0.01_realkind
+    zsnlim=0.0015_realkind
+    zsnl=0.035_realkind
+    !     
+    !     sg040315 constants used to define a new function of frsn, linear up to zx0,
+    !     and quadratic up tu zxm, where frsn=zfrsnasymp
+    !     
+    !     ps070618      zfrsnasymp=0.95
+    zfrsnasymp=0.985_realkind
+    zfact=0.1_realkind/0.0007_realkind
+    zx0=0.005_realkind
+    zacof=zfact/(4._realkind*(zx0-zfrsnasymp/zfact))
+    zxm=2._realkind*zfrsnasymp/zfact-zx0      
+    !     sg040315
+    !     
+    !     &***************************************************
+    cosmin=0.0001_realkind
+
+    zday=((real(monthc,realkind)-1._realkind)*30.4375_realkind + &
+         real(dayc,realkind) -1.9_realkind)*2._realkind*pi/365._realkind
+
+    zdec= 0.006918_realkind - 0.399912_realkind*cos(zday) + &
+         0.070257_realkind*sin(zday) &
+         -0.006758_realkind*cos(2.0_realkind*zday) +&
+         0.000907_realkind*sin(2.0_realkind*zday)         &
+         -0.002697_realkind*cos(3.0_realkind*zday) + &
+         0.001480_realkind*sin(3.0_realkind*zday)
+
+    cosd=cos(zdec)
+    sind=sin(zdec)
+
+    zutc = real(hourc,realkind)*15._realkind + &
+         real(minc,realkind)*0.25_realkind + &
+         real(secc,realkind)*15._realkind/3600._realkind -180._realkind
+    !     
+    !     &***************************************************
+    !     &***************************************************
+    !     
+    do 40 jl=kstart,kstop
+       !     
+       frsn(jl)=0.0_realkind
+       frsnfor(jl)=0.0_realkind
+       tskin(jl)=0.0_realkind
+       albedo(jl)=0.0_realkind
+       emskin(jl)=0.0_realkind
+       frcw(jl)=0.0_realkind
+       frop(jl)=0.0_realkind
+       frcw(jl)=0.0_realkind
+       frsnw(jl)=0.0_realkind
+       !     
+       !     sg0309
+       !     
+       frsnice(jl)=0.0_realkind
+       !     
+       !     
+       zsnopl=max(snopl(jl),0.0_realkind)
+       zsnfor=max(snfor(jl),0.0_realkind)
+       !     
+       !     sg0309
+       !     
+       zsnice=max(snice(jl),0.0_realkind)
+       !     
+       !     shall be replaced with albice(jl) from doesher from oceanographic model
+       !     
+       if(lcounttice(jl)<0.5_realkind) then
+          zalbice=albicenl(jl)
+          albsnice(jl)=albicenl(jl)
+       else
+          zalbice=albice
+       endif
+       !     
+       zlai_conif=lai_conif(jl)
+       !     
+       !     forest lai weighted from deciduous (with fraction zdecid)
+       !     and coniferous part
+       !     ps030516
+       zlaifor_int=frdecid(jl)*lai_decid(jl)+(1.0_realkind-frdecid(jl))*zlai_conif
+       zlaifor_int=max(zlaifor_int,0.01_realkind)
+       !     
+       !     &***************************************************
+       !     calculation of scos
+       !     
+       zhrang=(zutc+along(jl))*0.0174533_realkind
+       zcos=coslat(jl)*cosd*cos(zhrang)+sinlat(jl)*sind
+       zcos=min(max( zcos, cosmin ),1.0_realkind)
+       scos(jl)=zcos
+       !     
+       zsolar=90.0_realkind-acos(zcos)*180.0_realkind/pi
+       !     
+       if( frland(jl)>zfrlim ) then
+          zlandon=1.0_realkind
+          zlandoff=0.0_realkind
+       else
+          zlandon=0.0_realkind
+          zlandoff=1.0_realkind
+       endif
+       !     
+       !     l    parameter aggregation
+       !     ---------------------
+       !     
+       zfrfor=0.0_realkind
+       zfropl=0.0_realkind
+       zfrfor = min(frland(jl),frfor(jl))
+       if(frland(jl)>zfrlim) then
+          zfrfor=zfrfor/frland(jl)
+          zfropl=1.0_realkind-zfrfor
+       endif
+       !     
+       zcw=zfrfor
+       if(zcw<zfrlim)zcw=0.0_realkind
+       if(zcw>(1.0_realkind-zfrlim))zcw=0.97_realkind
+       !     
+       zcwinv=1.0_realkind/zfrlim
+       if(zcw>0.0_realkind)zcwinv=1.0_realkind/zcw
+       zcwdinv=1.0_realkind/zfrlim
+       if(zcw<1.0_realkind)zcwdinv=1.0_realkind/(1.0_realkind-zcw)
+       !     
+       zsfdist=0.6_realkind+0.001_realkind*orosigm(jl)
+       zsfdist=min(zsfdist,0.8_realkind)
+       !     
+       !     use simple formula from start (i.e. if we haven't reached
+       !     frsn=zfrsnasymp  before!)
+       !     snmax=0 at start of forecast
+       !     
+       !     sg    snow on ice
+       !     
+#ifdef OASIS
+       !     kw040510 compute zfrsnice only where needed
+       if (lcounttice(jl)>0.5_realkind) then
+#endif 
+          !     oasis
+          zsfdist=0.6_realkind
+          !     ps070618       zfrsnasymp=0.95
+          zfrsnasymp=0.985_realkind
+          !     
+          !     use simple formula from start (i.e. if we haven't reached
+          !     frsn=zfrsnasymp  before!)
+          !     snmaxice=0 at start of forecast
+          !     
+          if(snmaxice(jl)<1.e-6_realkind) then
+             !     zfrsnice=zfrsnasymp*tanh(300.*zsnice)
+             zslask=max(zxm-zsnice,0.0_realkind)
+             zfrsnice=zfact*zsnice
+             if(zsnice>zx0)zfrsnice=zfrsnasymp+zacof*zslask*zslask
+             !     
+             snmaxice(jl)=0.0_realkind
+             if(zfrsnice>(zfrsnasymp-0.001_realkind)) snmaxice(jl)=zsnice
+          else
+             zsn0=max(0.0_realkind,zsnice)
+             if (zsn0>=zsnlim)then
+                zfrsnice = min ( zsn0/(snmaxice(jl)*zsfdist), zfrsnasymp )
+             else
+                zslask = min ( zsnlim/(snmaxice(jl)*zsfdist), zfrsnasymp )
+                zfrsnice=zsn0*zslask/zsnlim
+             endif
+             zfrsnice=max(0.0_realkind,zfrsnice)
+             zfrsnice=min(zfrsnasymp,zfrsnice)
+          endif
+          !     
+          if(zfrsnice<zfrlim)zfrsnice=0._realkind
+          if(zfrsnice>(1.0_realkind-zfrlim))zfrsnice=zfrsnasymp
+          if(frice(jl)<zfrlim)zfrsnice=0._realkind
+#ifdef OASIS
+       else
+          !     kw set frsnow depending on whether rco ice surface is snow or pure ice
+          !     kw this can be distinguished with the albedo
+          if (albicenl(jl)<0.72_realkind) then
+             zfrsnice=0._realkind
+          else
+             zfrsnice=1.0_realkind
+          endif
+       endif
+       !     kw040510 end changes
+#endif	
+       !     oasis
+       frsnice(jl)=zfrsnice
+       !     
+       !     
+       !     zsnw=part of land covered with snow
+       !     
+       !     weight fractions of surface types for land
+       !     --------------------------------------------
+
+       zfrop = 0.0_realkind
+       zsnw = 0.0_realkind
+       zfrsn = 0.0_realkind
+       zfrsnfor = 0.0_realkind
+       rzsnoplmu=0.0_realkind
+       rzsnformu=0.0_realkind
+       if ( zlandon>0._realkind ) then
+          loldlim = .false.
+          call surf_land_tiles_splitup(zcw,zsnopl,snmax(jl),zsnfor,&
+               snmaxf(jl),zlandon,   zsfdist,   zfrlim,    loldlim, &
+               zfrop,zsnw,zfrsn,zfrsnfor,rzsnoplmu, rzsnformu  )       
+       endif
+       frop(jl)    = zfrop
+       frsnw(jl)   = zsnw
+       frsn(jl)    = zfrsn
+       frcw(jl)    = zcw 
+       frsnfor(jl) = zfrsnfor
+
+       snmax(jl)  = rzsnoplmu
+       snmaxf(jl) = rzsnformu
+       !     
+       !     lprint=.false.
+       !     zalat=acos(coslat(jl))*180./3.141592654
+       !     if(along(jl)>352.73.and. along(jl)<352.77)then
+       !     if(zalat>32.31.and. zalat<32.35)then
+       !     lprint=.true.
+       !     endif
+       !     endif
+       !     if(lprint)write(908,'(1i5,7(1pe12.4))')
+       !     + jl,frland(jl),frfor(jl),zfrop,zcw,zsnw,
+       !     + zfrsn,zfrsnfor
+
+       !     
+       zviewfl=exp(max(-89._realkind,-0.5_realkind*zlaifor_int))
+       !     ps070611      zviewfs=zviewfl
+       zviewfs=exp(max(-89._realkind,-0.5_realkind*zlaifor_int*(4._realkind-3._realkind*zcos)))
+       !     
+       !     emissivity for open land snow is expressed as a function
+       !     of albedo of open land snow
+       !     
+       zemsnowl=(albsnowl(jl)-albsnlmin)/(albsnlmax-albsnlmin)
+       zemsnowl=min(max(zemsnowl,0._realkind),1.0_realkind)
+       zemsnowl=zemsnowl*(emsnlmax-emsnlmin)+emsnlmin
+       !     
+       !     correction for no  direct short wave radiation 
+       !     
+       zgldiffuse = cov2d(jl) + (1.0_realkind-cov2d(jl)) *globtab(nint(zsolar))
+       zviewfs= (1.0_realkind-zgldiffuse)*zviewfs+zgldiffuse*zviewfl
+       !     
+       if(use_guess)then
+          !     for guess use predefined values of albedo and emissivity as specified in inisurf.f
+          if(abs(soiltype(jl)-2.0_realkind)<1.e-14_realkind)then
+             zalbsoil=albdesert
+             zemsoil=emdesert
+          else
+             zalbsoil=alboplsoil
+             zemsoil=emoplsoil
+          endif
+          zalbopl=vegopl(jl)*alboplveg+(1.0_realkind-vegopl(jl))*zalbsoil
+          zalbfor=albforconif*(1.0_realkind-frdecid(jl))+albfordecid*frdecid(jl)
+          zemopl=vegopl(jl)*emoplveg+(1.0_realkind-vegopl(jl))*zemsoil
+          zemfor=emforconif*(1.0_realkind-frdecid(jl))+emfordecid*frdecid(jl)
+       else         
+          !     else use values of albedo and emissivity as specified by ecoclimap
+          zalbopl=alb_t1(jl)
+          zalbfor=(1.0_realkind-frdecid(jl))*alb_t2(jl)+frdecid(jl)*alb_t3(jl)
+          zemopl=emis_t1(jl)
+          zemfor=(1.0_realkind-frdecid(jl))*emis_t2(jl)+frdecid(jl)*emis_t3(jl)
+
+          if(zalbopl<=0._realkind.and.zfrop>0._realkind)then
+             zalbopl=alboplsoil
+          endif
+          if(zemopl<=0._realkind.and.zfrop>0._realkind)then
+             zemopl=emoplsoil
+          endif
+       endif
+       zalbland=zfrop*zalbopl+zcw*((1.0_realkind-zviewfs)*zalbfor +          &
+            zviewfs*((1.0_realkind-zfrsnfor)*albforfloor+zfrsnfor*albsnfor))+ &
+            zsnw*albsnowl(jl)
+       zemland=zfrop*zemopl+zcw*((1.0_realkind-zviewfl)*zemfor +           &
+            zviewfl*((1.0_realkind-zfrsnfor)*emforfloor+zfrsnfor*emsnow))+  &
+            zsnw*zemsnowl    
+       zalbsea=(1.0_realkind-frice(jl))*albwater +                          &
+            frice(jl) *     &
+            ((1.0_realkind-zfrsnice)*zalbice + zfrsnice*albsnice(jl))        
+       !                             
+       zemsea=(1.0_realkind-frice(jl))*emwater +                            &
+            frice(jl) *     &
+            ((1.0_realkind-zfrsnice)*emice + zfrsnice*emsnow)
+       !     
+
+       !     kk0405
+       !     albedo end emissitivity for lakes ----------------------------
+       !     --------------------------------------------------------------
+       do ilaketype = 1, nlaketype
+          !     switchers ---------------------------------------------------
+          if(frlake(jl,ilaketype)<fraclakemin) then ! fraction of lake is too small 
+             zlakewateron = 0._realkind
+             zlakewateroff = 1._realkind
+             zlakeiceon = 0._realkind
+             zlakeiceoff = 1._realkind
+             zlakesnowon = 0._realkind
+             zlakesnowoff = 1._realkind  
+          else                ! fraction of lake is big enough
+             if(icedepthlake(jl,ilaketype)<h_ice_min_flk) then ! there is no ice
+                zlakewateron = 1._realkind
+                zlakewateroff = 0._realkind
+                zlakeiceon = 0._realkind
+                zlakeiceoff = 1._realkind
+                zlakesnowon = 0._realkind
+                zlakesnowoff = 1._realkind 
+             else             ! there is ice
+                if(sndepthlake(jl,ilaketype)<h_snow_min_flk) then ! there is no snow on ice
+                   zlakewateron = 1._realkind
+                   zlakewateroff = 0._realkind
+                   zlakeiceon = 1._realkind
+                   zlakeiceoff = 0._realkind
+                   zlakesnowon = 0._realkind
+                   zlakesnowoff = 1._realkind
+                else          ! there is snow on ice
+                   zlakewateron = 1._realkind
+                   zlakewateroff = 0._realkind
+                   zlakeiceon = 1._realkind
+                   zlakeiceoff = 0._realkind
+                   zlakesnowon = 1._realkind
+                   zlakesnowoff = 0._realkind
+                endif         ! snow condition
+             endif            ! ice condition
+          endif               ! fraction of lake condition
+          !     --------------------------------------------------------    
+          !     propeties for lakes
+          zalbice0 = exp(max(-89._realkind,-c_albice_mr*(tmelt - tlakesfc(jl,ilaketype))/tmelt)) ! kk, 19.11.05     
+          zalbicenew = albedo_whiteice_ref*(1.0_realkind - zalbice0)        &
+               + albedo_blueice_ref*zalbice0 ! kk, 19.11.05        
+          zalblake(ilaketype) =                                   &
+               zlakewateron*zlakeiceoff*zlakesnowoff*albwater +   &
+               zlakewateron*zlakeiceon*zlakesnowoff*albice +      &
+               zlakewateron*zlakeiceon*zlakesnowon*albsnow         
+          zemislake(ilaketype) =                                  &
+               zlakewateron*zlakeiceoff*zlakesnowoff*emwater +    &
+               zlakewateron*zlakeiceon*zlakesnowoff*emice +       &
+               zlakewateron*zlakeiceon*zlakesnowon*emsnow   
+       enddo
+       !     weighting ------------------------------------------
+       zalblakeweight = 0._realkind
+       zemislakeweight = 0._realkind
+       do ilaketype = 1, nlaketype
+          zalblakeweight = zalblakeweight +zalblake(ilaketype) &
+               * frlake(jl,ilaketype)
+          zemislakeweight = zemislakeweight +zemislake(ilaketype) &
+               * frlake(jl,ilaketype)  
+
+       enddo
+       !     
+       !     linear weighting of albedos
+       !     --------------------------------------------
+       !     
+       !     -whithout taking care of vectorization yet - kk0405
+       if(nint(lcounttice(jl))==3) then ! there are lakes
+          albedo(jl) = frland(jl)*zalbland + zalblakeweight
+          emskin(jl) = frland(jl)*zemland  + zemislakeweight
+       else                   ! there is sea 
+          albedo(jl)=frland(jl)*zalbland + (1.0_realkind-frland(jl))*zalbsea
+          !     
+          emskin(jl)=frland(jl)*zemland + (1.0_realkind-frland(jl))*zemsea       
+       endif
+       !     
+       lprint=.false.
+       zalat=acos(coslat(jl))*180._realkind/3.141592654_realkind
+       if(sinlat(jl)<0._realkind)zalat=-zalat
+       !     if(along(jl)>6.60 .and. along(jl)<7.00)then
+       !     if(zalat>30.8.and. zalat<31.6)then
+       !     ps       if(along(jl)>15.5 .and. along(jl)<16.0)then
+       !     ps          if(zalat>62.9.and. zalat<63.0)then
+       if(along(jl)>1.95_realkind .and. along(jl)<2.05_realkind)then
+          if(zalat>32.1_realkind.and. zalat<32.2_realkind)then
+             lprint=.true.
+          endif
+       endif
+       lprint=.false.
+       if(lprint)write(911,'(2i6,2f8.3,26(1pe12.4))')      &
+            jl,1,zalat,along(jl),                           &
+            frland(jl),frfor(jl),                           &
+            zfrop,zcw,zsnw,zfrsn,zfrsnfor,zviewfl,          &
+            zalbland,zalbsea,albedo(jl),                    &
+            zemland,zemfor,emsnow,zemsnowl,                 &
+            emskin(jl),zemopl,zalbopl,zalbfor,albforfloor,  &
+            albsnowl(jl)
+
+       !     
+       !     
+       !     4:th power weighting of temperatures
+       !     --------------------------------------------
+       !     
+       !     kk0405:
+       !     weighting for lakes: ------------------------------------
+       ztlake4weight = 0._realkind
+       do ilaketype = 1, nlaketype
+          ztlake4weight = ztlake4weight +tlakesfc(jl,ilaketype)**4 &
+               * frlake(jl,ilaketype)
+       enddo
+       zt4=zfrop*tsns(jl)*tsns(jl)*tsns(jl)*tsns(jl)
+       zt4=zt4+zcw*(1.0_realkind-zviewfl)*tc(jl)*tc(jl)*tc(jl)*tc(jl)
+       zt4=zt4+zcw*zviewfl*(1.0_realkind-zfrsnfor)*tsc(jl)*tsc(jl)*tsc(jl)*tsc(jl)
+       zt4=zt4+zcw*zviewfl*zfrsnfor*tsnc(jl)*tsnc(jl)*tsnc(jl)*tsnc(jl)
+       zt4=zt4+zsnw*tsnow(jl)*tsnow(jl)*tsnow(jl)*tsnow(jl)
+       zt4i=tice(jl)*tice(jl)*tice(jl)*tice(jl)
+       zt4isn=tsnice(jl)*tsnice(jl)*tsnice(jl)*tsnice(jl)
+       zt4s=tsea(jl)*tsea(jl)*tsea(jl)*tsea(jl)
+       !     -whithout taking care of vectorization yet: kk0405
+       if(nint(lcounttice(jl))==3) then ! there are lakes
+          zt4=frland(jl)*zt4+ztlake4weight
+       else                   ! there is sea 
+          zt4=frland(jl)*zt4+(1.0_realkind-frland(jl))*( (1.0_realkind-frice(jl))*zt4s + &
+               frice(jl)*(zt4i*(1.0_realkind-zfrsnice) + zfrsnice*zt4isn) )
+       endif
+       zt4=sqrt(zt4)
+       zt4=sqrt(zt4)
+       tskin(jl)=zt4
+       !     
+40  enddo
+    !     
+    return
+  end subroutine calctemps
+

@@ -1,0 +1,99 @@
+&institute
+inst='nsc'
+/
+&domain
+klon_global = 438
+klat_global = 438
+klev_global = 40
+south = -48.18
+west = -26.84
+dlon = 0.22
+dlat = 0.22
+polon =0
+polat = -90
+/
+
+&nampos
+linner=.true.
+npplon=388
+npplat=402
+iminpp=11
+jminpp=11
+/
+
+&namprocessor
+/
+&namvar
+    iacdg2=13
+    ksvar=1
+/
+&namprc
+ /
+
+&scenario
+/
+
+&namphys
+/
+
+&namconfig
+/
+&namrouting
+routing_path
+klon_bound
+klat_bound
+ntile
+dimstate
+acctime
+/
+
+ &namgcm
+      lecmwf=.true.
+      !lhadley = .true.
+ /
+
+ &namrestart
+      doRestart=.false.
+      reyear=1989
+      remonth=01
+      stopYear=2011
+      stopMonth=03
+ /
+
+&namdiffh
+      nlhdif=.false.
+      ak4=2.1482012e14
+/
+
+&namsl
+  nslpqi= 1
+  nslinc= 4
+  nslind= 4
+  nslint= 4,3,2,1,1,2,3
+  nslext= 2
+  dynamic_halo=.true.
+/
+&nambc
+/
+
+ &namrun
+      dtime=600
+      nlsimp=.true.
+      nlphys=.true.
+      sip0=101320.0
+      nltvir=.true.
+      nlhumc=.true.
+      nlstat=.true.
+      nltcrf=.true.
+      timesu=3599.0
+      nldynvd=.true.
+      nwmosvin=200
+      nlusug=.false.
+ /
+
+ &namtun
+ /
+
+ &namtsf
+ /
+

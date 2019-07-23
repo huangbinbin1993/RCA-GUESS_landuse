@@ -1,0 +1,25 @@
+&gtopo30
+        gtopo30_path='/afs/pdc.kth.se/home/d/doesc/Public/data/rca4data/gtopo30/'
+/
+&ecoclimap
+        ecopath='/cfs/ekman/nobackup/d/doesc/ECOCLIMAP/RUN/GLOBAL_001'
+/
+&lake
+        lake_path='/nobackup/rossby4/sm_psamu/LAKE_DATA_BASE/full_lake2_eco/res/'
+/
+&ecice
+        ecice_path='/cfs/ekman/nobackup/a/aulle/DATA/TICE/'
+/
+&global_clim
+        global_clim_path='/afs/pdc.kth.se/home/d/doesc/Public/data/rca4data/climLL1.0_ASIM/'
+/
+&climyears
+        climyears_path='/cfs/ekman/nobackup/a/aulle/DATA/clim'
+/
+&bound
+	bound_path='/cfs/ekman/nobackup/a/aulle/DATA/ERA40/ma'
+/
+&ghg
+!should be moved to official place	ghg_path='/nobackup/rossby15/rossby/../GHGfiles'
+	ghg_path='/nobackup/rossby15/sm_uhans/DATA/GHGfiles'
+/

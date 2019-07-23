@@ -1,0 +1,48 @@
+WHERE := /local_disk
+MPIINCLUDES := -I$(WHERE)/Code/openMpi_icc/include
+MPILIBS     :=  #-L$(WHERE)/Code/openMpi_icc/lib -lmpi_cxx   
+#-lopen-rte -lopen-pal -lmpi_f77  -lmpi -lopen-rte -lopen-pal -lpthread 
+
+
+IFORTLIBS := #-lpthread -ldl -lc -L/opt/intel/cce/10.1.018/lib  -limf -lcxaguard -lguide -liomp5 -liompprof5 -liompstubs5 -lipgo -lirc -lsvml -lirc_s -lompstub  
+
+
+MACHINECPP := $(DEFINITIONS) $(MPIINCLUDES)
+
+OPT := -O0
+ARCHOPT := #-xT
+
+
+CC      := /local_disk/Code/openMpi_icc/bin/mpicc 
+CCFLAGS := $(OPT) $(DBG) $(DEFINITIONS)
+
+CXX := /local_disk/Code/openMpi_icc/bin/mpicxx
+
+CXXFLAGS := $(OPT) $(DBG) $(DEFINITIONS)
+
+FDBG := $(DBG) #-CB -warn errors -implicitnone -debug -traceback -check bounds -CU -warn declarations -check all   -fp-stack-check 
+
+FC := /local_disk/Code/openMpi_icc/bin/mpif90 #ifort
+FHACKS := -mp # -fp-model strict #-mp #-gen-interfaces 
+FINCLUDE := -I$(ROOTDIR)/$(ARCH)/rcamod  -I$(ROOTDIR)/include/
+FCFLAGS := $(OPT) $(FDBG) $(FHACKS) $(DEFINITIONS) $(MPI_SPECIAL) $(FINCLUDE)
+
+
+
+# xlf (IBM/AIX), ifort (Intel/Linux) (and others) always produce
+# a lower-case module name
+ 
+MODNAME = $(shell echo $(*F) | tr "[:upper:]" "[:lower:]")
+MODEXT := mod
+
+LD          := $(FC)
+LD_MPP      := $(FC) -L/usr/lib/gcc/x86_64-redhat-linux/4.3.2 -lstdc++
+
+LDFLAGS     := -traceback   #-static  
+
+AR      := ar
+ARFLAGS := rv
+MV      := mv
+RM      := rm -f
+MKDIR   := mkdir
+RMDIR   := rmdir

@@ -1,0 +1,17 @@
+#!/bin/sh
+
+#SBATCH -n 8 ##number of processors
+#SBATCH -t 00:20:00
+#SBATCH -p r_nehalem
+
+export _DSM_OFF=OFF
+
+set -x
+
+NPROC=$SLURM_NPROCS
+
+# Run model
+time mpprun -np $NPROC main > runtime.log
+
+exit
+

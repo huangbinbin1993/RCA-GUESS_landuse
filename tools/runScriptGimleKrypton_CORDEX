@@ -1,0 +1,127 @@
+#!/bin/bash
+
+# This runscript is intended to be submitted in the directory
+# where the results are written and where the current namelists
+# are located.
+
+#SBATCH -n 24 ##number of processors
+#SBATCH -t 01:00:00
+#SBATCH -e slurm_error.txt
+#SBATCH -o slurm_output.txt
+
+#################################################
+#################################################
+
+# Analysing script
+cp /home/matlab/rossby/GENERAL_RCA_ANALYSIS/analysis_script_RCA4_CORDEX.sh   analysis_script.sh
+
+export _DSM_OFF=OFF
+set -x
+
+# Result directory
+export WORK_DIR=$PWD
+
+############## Info ##################
+
+echo "The current WORK_DIR:"
+echo $WORK_DIR
+echo
+
+echo "The SLURM_JOB_ID:"
+echo $SLURM_JOB_ID
+echo
+
+# Identify any last dump file
+lastdump=`ls dump* | tail -1`
+
+#############################################
+### BEGIN AUTOMATIC RESTART
+#############################################
+
+# If a dump file exist prepare for restart
+if [[ $lastdump != "" ]]; then
+  echo "A dump file is identified. Prepare for restart!"
+  lastdumpyear=${lastdump:5:4}
+  lastdumpmonth=${lastdump:9:2}
+
+# Check that the last dump file is complete by looking for next file fcyyyymm010000dd
+  nextfcdd="fc"$lastdumpyear$lastdumpmonth"010000dd"
+
+# If the last dump file is not complete, remove it and take the second last one
+  if [[ ! -f $nextfcdd ]]; then
+    echo $lastdump " is not complete!"
+    rm $lastdump
+    lastdump=`ls dump* | tail -1`
+    lastdumpyear=${lastdump:5:4}
+    lastdumpmonth=${lastdump:9:2}
+  fi
+    
+  echo "This file is used for restart: " $lastdump
+
+# Create a directory and copy/move some good files to keep before restart
+  newdir="LOGS_BEFORE_RESTART_"$lastdumpyear$lastdumpmonth
+  mkdir -p $newdir
+  mv runtime.log $newdir/
+  mv printed_namelists.dat $newdir/
+  cp namelists.dat $newdir/
+  
+# Remove all fc-files and cl-files from dump date and beyond
+  for ((mm=$lastdumpmonth;mm<=12;mm++)); do
+    mmtext=$mm
+    if (( $mm < 10 )); then
+      mmtext="0"$mmtext
+    fi
+    rm 'fc'$lastdumpyear$mmtext*
+    rm 'cl'$lastdumpyear$mmtext*
+    echo "remove fc"$lastdumpyear$mmtext
+  done
+# Be sure to remove all fc-files and cl-files also from next year if
+# the first dump file was corrupt
+  nextyear=`expr $lastdumpyear + 1`
+  for ((mm=1;mm<=12;mm++)); do
+    mmtext=$mm
+    if (( $mm < 10 )); then
+      mmtext="0"$mmtext
+    fi
+    rm 'fc'$nextyear$mmtext*
+    rm 'cl'$nextyear$mmtext*
+    echo "remove fc"$nextyear$mmtext
+  done
+
+# Modify namrestart in namelists.dat
+  sed -e "
+  /doRestart=/ c\\
+  doRestart=.true.
+  /reyear=/ c\\
+  reyear=$lastdumpyear
+  /remonth=/ c\\
+  remonth=$lastdumpmonth
+  " namelists.dat > tmpfile
+  mv -f tmpfile namelists.dat
+#
+  echo
+  echo "namelists.dat has been modified using"
+  echo "reyear="$lastdumpyear
+  echo "remonth="$lastdumpmonth
+  echo
+  echo "Now ready for restart!"
+  echo
+#############################################
+### END AUTOMATIC RESTART
+#############################################
+
+# No dump files exist, i.e. cold start
+else
+  echo "This is a cold start!"
+  rm cl*
+  rm fc*
+  rm *.log
+  rm *.out
+  rm dump*
+fi
+
+# Run model
+time mpprun $WORK_DIR/rca.x > runtime.log
+
+exit
+

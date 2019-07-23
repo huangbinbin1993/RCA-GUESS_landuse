@@ -1,0 +1,44 @@
+MPI_SPECIAL := -Nmixrpath
+ifeq (MPI_SRC,$(findstring MPI_SRC,$(DEFINITIONS)))
+	MPI_SPECIAL += -Nmpi
+endif
+
+OPT := -O0 
+DBG := -g -debug -traceback -ftrapuv
+
+CC      := icc 
+CCFLAGS := $(OPT) $(DBG) $(DEFINITIONS) $(MPI_SPECIAL)  -strict-ansi 
+
+CXX     := icc 
+CXXFLAGS := $(OPT) $(DBG) $(DEFINITIONS) $(MPI_SPECIAL)  -strict-ansi 
+
+FC := ifort 
+FDBG :=   $(DBG)  -warn all -CB -warn errors -implicitnone -debug  -check bounds -CU -warn declarations -check all -fp-stack-check -check all
+
+
+FHACKS := -heap-arrays 1 -fp-model strict 
+
+FINCLUDE := -I$(ROOTDIR)/$(ARCH)/rcamod  -I$(ROOTDIR)/include/ 
+
+ifeq (USING_NETCDF,$(findstring USING_NETCDF,$(DEFINITIONS)))
+	NETCDFPATH := /software/apps/netcdf/4.0/i111064
+	FINCLUDE += -I$(NETCDFPATH)/include/
+	NCDF := -L$(NETCDFPATH)/lib -lnetcdff -lnetcdf -Wl,-rpath,$(NETCDFPATH)/lib
+endif
+
+FCFLAGS := $(OPT) $(FDBG) $(FHACKS) $(DEFINITIONS) $(MPI_SPECIAL) $(FINCLUDE) 
+
+MODNAME = $(shell echo $(*F) | tr "[:upper:]" "[:lower:]")
+MODEXT := mod
+
+LD          := $(FC)
+LD_MPP      :=  -L/usr/lib/gcc/x86_64-redhat-linux/4.1.2 -lstdc++ $(MPI_SPECIAL) $(NCDF)
+
+AR      := xiar
+ARFLAGS := rv
+MV      := mv
+RM      := rm -f
+MKDIR   := mkdir
+RMDIR   := rmdir
+
+

@@ -1,0 +1,41 @@
+
+
+OPT := -O0
+DBG := -g -debug -traceback -ftrapuv
+        
+CC      := mpicc -cc=icc
+CCFLAGS := $(OPT) $(DBG) $(DEFINITIONS)  -strict-ansi 
+
+CXX     := mpicc -cc=icc
+CXXFLAGS := $(OPT) $(DBG) $(DEFINITIONS) -strict-ansi 
+
+FC := mpif90 -fc=ifort 
+FDBG :=   $(DBG)  -warn all -CB -warn errors -implicitnone -debug  -check bounds -CU -warn declarations -check all -fp-stack-check -check all
+
+FHACKS := -heap-arrays 1 -fp-model strict 
+FINCLUDE := -I$(ROOTDIR)/$(ARCH)/rcamod  -I$(ROOTDIR)/include/ 
+
+ifeq (USING_NETCDF,$(findstring USING_NETCDF,$(DEFINITIONS)))
+    NETCDFPATH :=/pdc/vol/netcdf/4.0.1
+    FINCLUDE += -I$(NETCDFPATH)/include/
+endif
+
+FCFLAGS := $(OPT) $(FDBG) $(FHACKS) $(DEFINITIONS)  $(FINCLUDE) 
+
+MODNAME = $(shell echo $(*F) | tr "[:upper:]" "[:lower:]")
+MODEXT := mod
+
+LD          := $(FC)
+LD_MPP      := -L /usr/lib/gcc/x86_64-redhat-linux/4.1.2 -lstdc++ 
+ifeq (USING_NETCDF,$(findstring USING_NETCDF,$(DEFINITIONS)))
+	LD_MPP +=-L$(NETCDFPATH)/lib  -lnetcdf -Wl,-rpath,$(NETCDFPATH)/lib -L/pdc/vol/hdf5/1.8.3/lib -Wl,-rpath,/pdc/vol/hdf5/1.8.3/lib -lhdf5 -lhdf5_hl -L/pdc/vol/szip/2.1/lib -Wl,-rpath,/pdc/vol/szip/2.1/lib -lsz -L/pdc/vol/zlib/1.2.3/lib -lz -Wl,-rpath,/pdc/vol/zlib/1.2.3/lib
+
+endif
+AR      := xiar
+ARFLAGS := rv
+MV      := mv
+RM      := rm -f
+MKDIR   := mkdir
+RMDIR   := rmdir
+
+

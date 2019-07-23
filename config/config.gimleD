@@ -1,0 +1,41 @@
+MPI_SPECIAL := -Nmixrpath
+ifeq (USING_MPI,$(findstring USING_MPI,$(DEFINITIONS)))
+	MPI_SPECIAL += -Nmpi
+endif
+
+OPT := -O0 
+DBG := -g
+
+TRACE := #-lVT -I$VT_ROOT/include -L$VT_LIB_DIR $VT_ADD_LIBS #assumes module add itac
+
+CC      := icc 
+CCFLAGS := $(OPT) $(DBG) $(DEFINITIONS) $(MPI_SPECIAL) $(TRACE) -strict-ansi -traceback
+
+CXX     := icc 
+CXXFLAGS := $(OPT) $(DBG) $(DEFINITIONS) $(MPI_SPECIAL) $(TRACE) -strict-ansi  -traceback
+
+FC := ifort 
+
+FDBG := $(DBG) -traceback -warn all -CB -warn errors -implicitnone -debug  -check bounds -CU -warn declarations -check all -fp-stack-check   -ftrapuv
+
+FHACKS :=  -ftz -fp-model strict -fmath-errno -fstack-security-check -fstack-protector -fp-stack-check -no-ftz #-fpe0
+FINCLUDE := -I$(ROOTDIR)/$(ARCH)/rcamod  -I$(ROOTDIR)/include/
+ifeq (USING_NETCDF,$(findstring USING_NETCDF,$(DEFINITIONS)))
+	NETCDFPATH := /software/apps/netcdf/4.0/i111064
+	FINCLUDE += -I$(NETCDFPATH)/include/
+	NCDF := -L$(NETCDFPATH)/lib -lnetcdff -lnetcdf -Wl,-rpath,$(NETCDFPATH)/lib
+FCFLAGS := $(OPT) $(FDBG) $(FHACKS) $(DEFINITIONS) $(MPI_SPECIAL) $(FINCLUDE) $(TRACE)
+
+# xlf (IBM/AIX), ifort (Intel/Linux) (and others) always produce a lower-case module name
+MODNAME = $(shell echo $(*F) | tr "[:upper:]" "[:lower:]")
+MODEXT := mod
+
+LD          := $(FC)
+LD_MPP      :=  -L /usr/lib/gcc/x86_64-redhat-linux/4.1.2 -lstdc++ $(MPI_SPECIAL) $(TRACE) $(NCDF)
+
+AR      := xiar
+ARFLAGS := rv
+MV      := mv
+RM      := rm -f
+MKDIR   := mkdir
+RMDIR   := rmdir

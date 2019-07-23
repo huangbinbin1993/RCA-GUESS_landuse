@@ -1,0 +1,7 @@
+        !COMPILER-GENERATED INTERFACE MODULE: Mon Oct 18 16:29:52 2010
+        MODULE HLPROG__genmod
+          INTERFACE 
+            SUBROUTINE HLPROG
+            END SUBROUTINE HLPROG
+          END INTERFACE 
+        END MODULE HLPROG__genmod

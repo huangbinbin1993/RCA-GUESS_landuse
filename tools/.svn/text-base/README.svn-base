@@ -1,0 +1,7 @@
+README: for installation of RCA:
+makedepf90 is a standalone program to generate dependency lists for general programs.
+It is used by the make system included in RCA. RCA assumes that there is an executable called makedepf90  in tools/bin folder. The make of RCA builds the executable. 
+
+Norrköping 2010
+Marco Kupiainen
+marco.kupiainen@smhi.se

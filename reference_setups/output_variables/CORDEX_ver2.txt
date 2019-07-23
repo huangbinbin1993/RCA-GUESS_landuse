@@ -1,0 +1,138 @@
+!Grib code	Short name	Freq	Factor		CORDEX variable name
+!---------	----------	----	------		--------------------
+250 105 1	t2m_i		qq	1		tas_grid
+15 105 2	t2max		dd	1		tasmax_grid
+16 105 2	t2min		dd	1		tasmin_grid
+250 105 7	q2m_i		qq	1		huss_grid
+250 105 102	mv10_i		qq	1		sfcwind_grid
+32 105 10	U10max		dd	1		sfcwindmax_grid
+250 105 13	u10_i		pp	1		uas_grid
+250 105 19	v10_i		pp	1		vas_grid
+250 105 107	t2mopsnsi_i	qq	1		tas
+241 105 24	t2opsnsimax	dd	1		tasmax
+241 105 25	t2opsnsimin	dd	1		tasmin
+62 105 4006	lsprc		qq	1/10800		prls
+1 103 0		slp		qq	1		psl
+1 105 0		sp		qq	1		ps
+250 105 108	q2mopsnsi_i	qq	1		huss
+250 105 112	mv10opsnsi_i	qq	1		sfcwind
+241 105 26	U10mopsnsimax	dd	1		sfcwindmax
+71 105 3006	totcc_a		qq	100		clt
+240 105 4006	assh		qq	3600		sund
+116 105 3006	swdwnsrf	qq	1		rsds
+115 105 3006	lwdwnsrf	qq	1		rlds
+242 105 31	latf_a		qq	-1		hfls
+242 105 25	senf_a		qq	-1		hfss
+!							rsus	This variable will be processed from swdwnsrf-swnetsrf
+111 105 3006	swnetsrf	qq	1		xx	Needed for rsus
+!							rlus	This variable will be processed from lwdwnsrf-lwnetsrf
+112 105 3006	lwnetsrf	qq	1		xx	Needed for rlus
+245 105 66	evap_c		pp	1/21600		evspsbl
+245 105 67	latfp1_c	pp	1/21600		evspsblpot
+250 105 114	soilfrwmm_i	pp	1		mrfso
+!							mrros	Surface_Runoff does not exist in RCA
+90 105 4006	runoff		pp	1/21600		mrro
+250 105 113	soilwmm_i	pp	1		mrso
+250 105 68	sn_i		pp	1000		snw
+245 105 119	snowmeltland_c	pp	1/21600		snm
+61 105 0	totprc_0	hh	1		xx	For hydrology
+64 105 0	maxdayprecip	dd	1		prhmax
+63 105 4006	convprc		qq	1/10800		prc
+65 105 4006	snowprc		qq	1/10800		prsn
+!							rlut	This variable will be processed from lwnettoa
+114 105 3006	lwnettoa	pp	1		xx	Needed for rlut
+117 105 3006	swdwntoa	pp	1		rsdt
+!							rsut	This variable will be processed from swnettoa
+113 105 3006	swnettoa	pp	1		xx	Needed for rsut
+250 105 110	u10opsnsi_i	pp	1		uas
+250 105 111	v10opsnsi_i	pp	1		vas
+241 105 21	gustest		dd	1		wsgsmax
+241 105 27	gustestuc	dd	1		wsgsmax_uc
+242 105 37	momfu_a		pp	1		tauu
+242 105 43	momfv_a		pp	1		tauv
+250 105 63	tseff_i		pp	1		ts
+67 105 0	zi		pp	1		zmla
+54 105 0	precwtr_0	pp	1		prw
+76 105 0	cw_0		pp	1		clwvi
+58 105 0	cldice_0	pp	1		clivi
+75 105 3006	highcc_a	pp	100		clh
+74 105 3006	medcc_a		pp	100		clm
+73 105 3006	lowcc_a		pp	100		cll
+250 105 89	frsngrid_i	dd	100		snc
+250 105 115	dzsnow_i	dd	1		snd
+91 102 0	frice		dd	100		sic
+!
+! Pressure level data:
+11 100 200	t200		pp	1		ta200
+51 100 200	q200		pp	1		hus200
+33 100 200	u200		pp	1		ua200
+34 100 200	v200		pp	1		va200
+6 100 200	gpot200		pp	1/9.80665	zg200
+11 100 500	t500		pp	1		ta500
+51 100 500	q500		pp	1		hus500
+33 100 500	u500		pp	1		ua500
+34 100 500	v500		pp	1		va500
+6 100 500	gpot500		pp	1/9.80665	zg500
+11 100 850	t850		pp	1		ta850
+51 100 850	q850		pp	1		hus850
+33 100 850	u850		pp	1		ua850
+34 100 850	v850		pp	1		va850
+6 100 850	gpot850		pp	1/9.80665	zg850
+11 100 925	t925		pp	1		ta925
+51 100 925	q925		pp	1		hus925
+33 100 925	u925		pp	1		ua925
+34 100 925	v925		pp	1		va925
+6 100 925	gpot925		pp	1/9.80665	zg925
+!
+! Physiography data
+6 105 0		gpot		cl
+9 105 0		orosigm		cl
+246 105 1	lai_t1		cl
+246 105 2	lai_t2		cl
+246 105 3	lai_t3		cl
+246 105 4	z0_t1		cl
+246 105 5	z0_t2		cl
+246 105 6	z0_t3		cl
+246 105 7	emis_t1		cl
+246 105 8	alb_t1		cl
+246 105 9	veg_t1		cl
+246 105 10	frland		cl
+246 105 11	alb_soil	cl
+246 105 12	clay		cl
+246 105 13	sand		cl
+246 105 14	frac_t1		cl
+246 105 15	frac_t2		cl
+246 105 16	frac_t3		cl
+246 105 17	alb_t2		cl
+246 105 18	alb_t3		cl
+246 105 19	emis_t2		cl
+246 105 20	emis_t3		cl
+246 105 21	veg_t2		cl
+246 105 22	veg_t3		cl
+246 105 23	droot_t1	cl
+246 105 24	droot_t2	cl
+246 105 25	droot_t3	cl
+246 105 26	dsoil_t1	cl
+246 105 27	dsoil_t2	cl
+246 105 28	dsoil_t3	cl
+246 105 29	rsmin_t1	cl
+246 105 30	rsmin_t2	cl
+246 105 31	rsmin_t3	cl
+246 105 32	alb_veg_t1	cl
+246 105 33	alb_veg_t2	cl
+246 105 34	alb_veg_t3	cl
+246 105 35	texture		cl
+246 105 36	minlai_t1	cl
+246 105 37	minlai_t2	cl
+246 105 38	minlai_t3	cl
+246 105 39	maxlai_t1	cl
+246 105 40	maxlai_t2	cl
+246 105 41	maxlai_t3	cl
+246 105 42	frac_lake	cl
+246 105 43	soil_carb	cl
+246 105 44	frdeeplake	cl
+246 105 45	frmedlake	cl
+246 105 46	frshalllake	cl
+246 105 47	dptdeeplake	cl
+246 105 48	dptmedlake	cl
+246 105 49	dptshalllake	cl

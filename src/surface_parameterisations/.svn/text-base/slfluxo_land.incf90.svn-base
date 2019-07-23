@@ -1,0 +1,3414 @@
+subroutine slfluxo_land(nhor,nlev,kstart,kstop,     &
+     dtime,                     &
+     t,q,u,v,tke,gpot,dph,      &
+     ps,tsns,tsc,tc,tsnow,tskin,&
+     sw1opl,sw1for,sw2opl,sw2for,sw3opl,sw3for,      &
+     svegfor,svegopl,           &
+     frland,soiltype,   &
+     drolddt,dsolddt,           &
+     raincv_kf,snowcv_kf,       &
+     radf,albedo,scos,sswdn,emskin,    &
+     frop,frcw,frsnw,frsnfor,albsnowl, &
+     tsnc,tscsn,                &
+     snowcan,                   &
+     tsns2,tsns3,tsns4,tsns5,   &
+     tssn2,tssn3,tssn4,tssn5,   &
+     tsc2,tsc3,tsc4,tsc5,       &
+     tscsn2,tscsn3,tscsn4,tscsn5,      &
+     laiopn_int,lai_conif,lai_decid,   &
+     vegopl,cov2d,              &
+     frdecid,vegfor,            &
+     soil3wopl,soil3wfor,       &
+     frroot1wopl,frroot1wfor,   &
+     frroot2wopl,frroot2wfor,   &
+     alb_t1,alb_t2,alb_t3,emis_t1,emis_t2,emis_t3,   &
+     z0_t1,z0_t2,z0_t3,rsmin_t1,rsmin_t2,rsmin_t3,   &
+     along,coslat,sinlat,kstep, &
+     vcc_mix1,vcc_mix2,vfl_mix1,vfl_mix2,     &
+     senffor,latffor,tca,q2mfor,&
+     etropl1,etropl2,etropl3,etrfor1,etrfor2,etrfor3,&
+     evhvfor,evhvopl,latfnsbs,  &
+     senfns,latfns,radfns,      &
+     senfc,latfc,radfc,         &
+     senfsn,latfsn,radfsn,      &
+     senfsc,latfsc,radfsc,      &
+     dhdtsns,dhdtsn,dhcdtc,dhcdtsc,    &
+     dhscdtsc,dhscdtc,          &
+     tseff,t2ml,q2ml,t2mopsn,q2mopsn,t2mfor,  &
+     rh2ml,rh2mopsn,rh2mfor,    &
+     u10mopsn,v10mopsn,         &
+     senfl,latfl,evapl,ustarl,ustaropsn,ustarfor,z0land,    &
+     senfsnc,latfsnc,radfsnc,   &
+     dhcdtsnc,dhsncdtc,dhsncdtsnc,     &
+     dsenfnsdtns,dlatfnsdtns,   &
+     dsenfsndtsn,dlatfsndtsn,   &
+     dsenfcdtc,dlatfcdtc,dsenfcdtsc,dlatfcdtsc,      &
+     dsenfcdtsnc,dlatfcdtsnc,   &
+     dsenfscdtsc,dlatfscdtsc,dsenfscdtc,dlatfscdtc,  &
+     dsenfsncdtsnc,dlatfsncdtsnc,dsenfsncdtc,dlatfsncdtc,   &
+     swrad_net_opl,swrad_net_for,cond_opl,cond_for,  &
+     latsnowcan,vegvel,evopl,   &
+     weightbs,weightopv,weightsn,faopet)                                                        
+
+  !                                                                                             
+  !    l    subroutine slfluxo:                                                                 
+  !                                                                                             
+  !    l    authors:                                                                            
+
+  !    l    stefan gollvik,(smhi) sept 1994                                                     
+  !    for sweclim: s gollvik and b bringfelt spring 1999                                       
+  !    l    modified by bent hansen sass,(dmi), april 1995                                      
+  !    l    modified by bent hansen sass,(dmi), december 1997                                   
+  !    l            ( to eliminate 'jqif'-function)                                             
+  !    l    s.gollvik, p.samuelsson april 2000                                                  
+
+  !                                                                                             
+  !    l    purpose:                                                                            
+
+  !    l    a) provide surface input to verical diffusion                                       
+  !                                                                                             
+  !    l    b) calculate diagnostic 2m values over land of temperatures and humidity,           
+  !                                                                                             
+  !    l    this is for land only!!!                                                            
+
+  !    l    input:                                                                              
+
+  !    l    nhor:    number of points in  horizontal loop.                                      
+  !    l    nlev:    number of vertical levels.                                                 
+  !    l    kstart:  start index of horizontal loop.                                            
+  !    l    kstop:   stop index of horizontal loop.                                             
+
+  !    l    dtime:   time step (s),(two time the time step in the dynamics)                     
+  !    l    t    :   temperature (k),(3d field)                                                 
+  !    l    q    :   specific humidity ,(kg/kg),(3d field)                                      
+  !    l    u    :   wind component towards the east ,(m/s), (3d field)                         
+  !    l    v    :   wind component towards the north,(m/s), (3d field)                         
+  !    l    gpot :   geopotential height (m2/s2)                                                
+  !    l    dph  :   pressure difference (pa) between half levels.                              
+  !    l    ps   :   surface pressure (pa)                                                      
+  !    l    tsns :   surface land temperature for no snow area (k)                              
+  !    l    tsc  :   temperature of soil under canopy                                           
+  !    l    tc:      canopy temperature                                                         
+  !    l    tskin:   skin surface temperature                                                   
+  !    l    sn   :   snow height (m)                                                            
+  !    l    sw   :   soil water (m)                                                             
+  !    l    swd  :   deep soil water (m)                                                        
+  !    l    svegfor: water on trees (m)                                                         
+  !    l    svegopl: water on open land vegetation (m)                                          
+  !    l    frland:  fraction of land area.                                                     
+  !    l    frclr:   fraction of clearings in the forest                                        
+  !    l    soiltype:  type of soil                                                             
+  !    l    frfor:  fraction of forest                                                          
+  !    l    z0oro:   orographic (land) roughness (m).                                           
+  !    l    drolddt: draindt from previous timestep.                                            
+  !    l    dsolddt: dsnowdt from previous timestep.                                            
+  !    l    tsnow:   temperature of snow                                                        
+  !    l    radf:    grid square average of surface radiation budget                            
+  !    l    sswdn:   grid square average of downward short wave radiation                       
+  !    l    albedo:  grid square average of surface albedo                                      
+  !    l    scos:    cosine for solar zenith angle                                              
+  !    l    vegfor:  fraction of vegeation for forest                                           
+  !    l    vegopl:  fraction of vegeation for open land                                        
+  !    l    zlaifor_int:    leaf area index for forest                                          
+  !    l    laiopn_int:    leaf area index for open land                                        
+  !    l                                                                                        
+  !                                                                                             
+  !                                                                                             
+  !                                                                                             
+
+  !    l    output                                                                              
+
+  !    l    senfl:   land average of sensible heat flux (w/m2),                                 
+  !    l    latfl:   land average of latent heat flux (w/m2),                                   
+  !    l    etrfor:  transevaporation  flux (w/m2) positive from trees to atm.                  
+  !    l    etropl:  transevaporation  flux (w/m2) positive from ground to atm.                 
+  !    l    esn:     evaporation from snow (w/m2) positive from ground to atm.                  
+  !    l    latfnsbs:  evaporation from open land bare soil (w/m2) positive to bare soil        
+  !    l    frlfora: fraction of forest actually used                                           
+  !    l    tseff:   average temperature (k) over land                                          
+  !    l    t2ml:    2 meter temperature (k) land                                               
+  !    l    q2ml:    2 meter specific humidity over land (kg/kg).                               
+  !    l    t2mopsn:    2 meter temperature (k) over open land and snow areas                   
+  !    l    q2mopsn:    2 meter specific humidity over open land and snow areas (kg/kg).        
+  !    l    t2mfor:    tca (k) in forest                                                        
+  !    l    q2mfor:    qca in forest (kg/kg).                                                   
+  !    l    senfns   sensible heat flux no snow                                                 
+  !    l    latfns   latent heat flux no snow                                                   
+  !    l    radfsn:  radiation flux for  no snow                                                
+  !    l    senfc:   sensible heat flux canopy                                                  
+  !    l    latfc    latent heat flux canopy                                                    
+  !    l    radfc:   radiation flux for canopy                                                  
+  !    l    senfsc:  sensible heat flux for surface below trees                                 
+  !    l    latfsc   latent heat flux for surface below trees                                   
+  !    l    radfsc:  radiation flux for surface below trees                                     
+  !    l    senfsn:  sensible heat flux for snow                                                
+  !    l    latfsn:  latent heat flux for snow                                                  
+  !    l    radfsn:  radiation flux for snow                                                    
+  !    l    dhdtsns: flux derivative with respect to no snow temperature (w/(m2 k),             
+  !    l    dhcdtc:  canopy flux derivative w.r.t. tc                                           
+  !    l    dhcdtsc: canopy flux derivative w.r.t. tsc                                          
+  !    l    dhscdtc: surface below canopy flux derivative w.r.t. tc                             
+  !    l    dhscdtsc: surface below canopy flux derivative w.r.t. tsc                           
+  !    l    dhdtsn:  derivative of flux with respect to tsnow                                   
+  !    l    ustarl:   surface friction velocity (m/s) for land                                  
+
+  !    note: latfl,senfl  > 0 for fluxes towards surface.                                       
+
+  !                                                                                             
+  !    l    tsnc:    snow temperature in forest                                                 
+  !    l    tscsn:   soil temperature under snow in forest                                      
+  !    l    senfsnc: sensible heat flux for snow in forest                                      
+  !    l    latfsnc: latent heat flux for snow in forest                                        
+  !    l    radfsnc: radiation flux for snow in forest                                          
+  !    l    dhdtsnc: derivative of snowflux with respect to tsnc                                
+  !    l                                                                                        
+  !    l    dhcdtsnc: derivative of canopy heat flux with respect to tsnc                       
+  !    l                                                                                        
+  !    ---------------------------------------                                                       
+
+  use comrpar                                                                              
+  use confys                                                                               
+  use ctun, only:acrit                                                                                
+  use escom                                                                                
+  use config                                                                               
+  use co2mod
+
+  implicit none                                                                            
+
+  integer:: jl,nhor,nlev,kstart,kstop
+
+  real(kind=realkind) zlandon,zlandoff,zuneg,zupos,zvneg,zvpos, &
+       zstaon,zstaoff,zunson,zunsoff,zroumin                                               
+  real(kind=realkind) dtime                                                                               
+
+  real(kind=realkind) zdup2,zcons1,ztsns,ztsnc,  &
+       zqd,ztemp,zlatns,zhnlev,zvel,zueps,      &
+       zri,zriq,zvirnl,z01,z02,z03,zfmx,zqb,zqc,&
+       zcrdq,zcdrag,zcdrgh,zcneut,zustar,zdens,zcams3, &
+       z10m,z2m,zfrlim,zqlim,zqsdum,     &
+       zqam,ztam,ze,zh,           &
+       ztotf,zmoin,zsl1,zsl11,zl2,zln2,zln2k,zrkar,    &
+       zunlev,zvnlev,zust,zvst,zthst,zqstar,zm,zhm,zq,zcpq,   &
+       zslask,zt2m,zq2m,zy2,zpar,zrepac,zqsdifns,zwet, &
+       zlb,zrous,zl2lim,zy,zvegmaxfor,zvegmaxopl,      &
+       zsifor,zsiopl,zrpi4,zhv,zhvfor,zhvopl,zevfor,zevopl,   &
+       zria,ztdum,zdr,zcharg,zcrit,zepcr,zsecu,zqdh,zslask2                                
+  real(kind=realkind) zveglim,z23,zevhv,zrainh,zaa,zcc,zdd,zvegmmfor, &
+       zvegmmopl,zvegp,zvegp0,zfx,zf0,zthr,zetr,&
+       zesc,zdeltafor,zdeltaopl,zlnrou,zdeltaoplold,   &
+       zdeltaforold,zvegpfor                                                               
+  real(kind=realkind) zegp,zetrp,zrsp,rt1,rt2,zfstep,zfliq,zrsoilsc,  &
+       zrsoilns,zecw,ztemp1,ztns,zrasn,zroussn,zrousopl,zrouscw,     &
+       zracw,zraopl,zslaskmom,z01mom,    &
+       zrouseff,z02mom,zcneutmom,zrah                                                      
+  real(kind=realkind) ztst2m                                                                              
+  real(kind=realkind) zl10,zln10,zln10k,zu10,zv10,zx10                                                    
+
+  real(kind=realkind) zradf,zradl,zalb,zrads,zalbsn,zsswr,zhsn                                            
+  real(kind=realkind) zlatsn,zdtcadtc,zdtcadtsc,zdqcadtc,zdqcadtsc                                        
+
+  real(kind=realkind) x,f,dfdx,za,zb,zc,zd,zg,zqsd,zdcant                                                 
+  integer iter                                                                             
+
+  real(kind=realkind) zhfor,zroughfor,zroughopl,zleafinc,zcw,zsnw,    &
+       zreveg,zcdveg,             &
+       zdisph,ztransh,zuloglay,zutranslay,zhvegvel,zgb,ztc,   &
+       ztsn,ztsc,zsswrc,zqsdifc,zqsdifsn,zqsdifsc,ztseff,     &
+       ztca,zlatc,zhns,zvegfor,zvegopl,zphih,zpisl,zsl2,zsl3, &
+       zqca,zca1,zca2,zca3,zviewfs,zviewfl,zrbinv,     &
+       zhc,zhvold,zfrop,zscos,zswitch,zlatsc,zhsc,zhcw,&
+       zhvoldfor,zqsdifca                                                                  
+  real(kind=realkind) zlaifor_int,zlai_conif,zemopl,zlaiopn_int                                           
+
+  real(kind=realkind) laiopn_int(nhor),lai_conif(nhor),lai_decid(nhor),      &
+       vegopl(nhor),cov2d(nhor)                                                                 
+
+  real(kind=realkind) frdecid(nhor),vegfor(nhor),&
+       soil3wopl(nhor),soil3wfor(nhor),  &
+       frroot1wopl(nhor),frroot1wfor(nhor),     &
+       frroot2wopl(nhor),frroot2wfor(nhor),     &
+       alb_t1(nhor),alb_t2(nhor),alb_t3(nhor),  &
+       emis_t1(nhor),emis_t2(nhor),emis_t3(nhor),z0_t1(nhor), &
+       z0_t2(nhor),z0_t3(nhor),rsmin_t1(nhor),rsmin_t2(nhor), &
+       rsmin_t3(nhor)                                                                      
+
+  real(kind=realkind) zdko,zalon,        &
+       zlarsmopl,zlarsmfor,zstresopl,zstresfor,zfliqns,&
+       zfliqsc,zqq,zfliqscsn,     &
+       zf21opl,zf22opl,zf23opl,zf21for,zf22for,zf23for,&
+       zrq1,zrq2,zrq3,            &
+       zrsrb1,zrsrb2,zrsrb3,zrsra1,zrsra2,zrsra3,      &
+       zrsrbsum,zrsrasum                                                                   
+
+  real(kind=realkind) tsd(nhor),etropl1(nhor),etropl2(nhor),etropl3(nhor),   &
+       etrfor1(nhor),etrfor2(nhor),etrfor3(nhor)                                           
+
+  real(kind=realkind)  gpot(nhor,nlev),dph(nhor,nlev+1),q(nhor,nlev), &
+       t(nhor,nlev),u(nhor,nlev),v(nhor,nlev),tke(nhor,nlev)                               
+
+  real(kind=realkind) z0oro(nhor),ustarl(nhor),tseff(nhor),    &
+       ustaropsn(nhor),ustarfor(nhor),   &
+       tsns(nhor),ps(nhor),senfl(nhor),tsc(nhor),      &
+       latfl(nhor),evapl(nhor),t2ml(nhor),q2ml(nhor),  &
+       t2mopsn(nhor),q2mopsn(nhor),z0land(nhor),&
+       t2mfor(nhor),q2mfor(nhor), &
+       u10mopsn(nhor),v10mopsn(nhor),u10mfor(nhor),    &
+       v10mfor(nhor),tca(nhor),   &
+       dhdtsns(nhor),dhdtsc(nhor),&
+       frland(nhor),soiltype(nhor)                                                         
+  real(kind=realkind) eg(nhor),etrfor(nhor),etropl(nhor),      &
+       evhvfor(nhor),evhvopl(nhor),      &
+       esn(nhor),latfnsbs(nhor),  &
+       svegfor(nhor),svegopl(nhor),      &
+       sw1opl(nhor),sw1for(nhor),sw2opl(nhor),sw2for(nhor),   &
+       sw3opl(nhor),sw3for(nhor)                                                           
+  real(kind=realkind) drolddt(nhor),dsolddt(nhor),      &
+       raincv_kf(nhor),snowcv_kf(nhor)                                                     
+
+  real(kind=realkind) tsnow(nhor),radf(nhor),sswdn(nhor),albsnowl(nhor),     &
+       albedo(nhor),scos(nhor),senfsn(nhor),    &
+       latfsn(nhor),evapsn(nhor),radfsn(nhor),dhdtsn(nhor)                                 
+
+  real(kind=realkind) tc(nhor),senfc(nhor),latfc(nhor),evapc(nhor),senfns(nhor),    &
+       latfns(nhor),evapns(nhor),tskin(nhor),radfns(nhor),    &
+       radfc(nhor),radfsc(nhor),emskin(nhor),   &
+       senfsc(nhor),latfsc(nhor),evapsc(nhor),  &
+       dhcdtc(nhor),dhcdtsc(nhor),dhscdtc(nhor),&
+       dhscdtsc(nhor),frsnfor(nhor),     &
+       frop(nhor),frcw(nhor),frsnw(nhor)                                                   
+
+  real(kind=realkind) tsnc(nhor),tscsn(nhor),    &
+       senfsnc(nhor),latfsnc(nhor),evapsnc(nhor),radfsnc(nhor),      &
+       dhcdtsnc(nhor),dhsncdtc(nhor),dhsncdtsnc(nhor)                                      
+  real(kind=realkind) dsenfnsdtns(nhor),dlatfnsdtns(nhor),     &
+       dsenfsndtsn(nhor),dlatfsndtsn(nhor),     &
+       dsenfcdtc(nhor),dlatfcdtc(nhor),dsenfcdtsc(nhor),      &
+       dlatfcdtsc(nhor),          &
+       dsenfcdtsnc(nhor),dlatfcdtsnc(nhor),     &
+       dsenfscdtsc(nhor),dlatfscdtsc(nhor),dsenfscdtc(nhor),  &
+       dlatfscdtc(nhor),          &
+       dsenfsncdtsnc(nhor),dlatfsncdtsnc(nhor),dsenfsncdtc(nhor),    &
+       dlatfsncdtc(nhor)                                                                   
+  real(kind=realkind) dlatfvegopldtns(nhor),dlatfsoilopldtns(nhor)                                        
+
+  !    for guess purposes                                                                       
+  real(kind=realkind) swrad_net_opl(nhor),swrad_net_for(nhor),cond_opl(nhor),&
+       cond_for(nhor)                                                                      
+
+  !    snow interception                                                                        
+  real(kind=realkind) snowcan(nhor),latsnowcan(nhor),vegvel(nhor),    &
+       evopl(nhor)                                                                         
+  real(kind=realkind) weightbs(nhor),weightopv(nhor),weightsn(nhor)                                       
+  real(kind=realkind) rhosncan,zsnowcanmax,zrs,zevapeff,zca5,zlattemp,zcp,zk,&
+       zinteff,zsnowcan,zsnowcanmel                                                        
+
+  real(kind=realkind) zfrsnfor,                  &
+       zlwupforfloor,zlwdnforfloor,zqsdifsnc,zlatsnc,zca4,zhsnc,     &
+       zdtcadtsnc,ztemp2,zdqcadtsnc                                                        
+  real(kind=realkind) zalbopl,zemsoil,zalbfor,zsswrsc,  &
+       zsswrsnc,zsolar,zgldiffuse,zemfor,zalbsoil,     &
+       zemsnowl                                                                            
+
+  real(kind=realkind) zrey,zcvis,zzilitin,zfact,zroughsn                                                  
+
+  real(kind=realkind) clog                                                                                
+  real(kind=realkind) zustaropl,zustarsn, zqs,zt2mbs,zt2mopv,zt2msn,  &
+       zq2mbs,zq2mopv,zq2msn,     &
+       zu10mbs,zu10mopv,zu10msn,  &
+       zv10mbs,zv10mopv,zv10msn
+  real(kind=realkind)::t2mopv_C,phsyc,svpc,esat_opv,ea_opv,rh2mopv,uv10mopv,uv2mopv
+  real(kind=realkind)::soilfns_MJh, radfns_MJh
+  real(kind=realkind),intent(out)::faopet(nhor)
+  real(kind=realkind) ztdumout,zqdumout,zudumout,zrhdumout                                                
+
+  real(kind=realkind) senffor(nhor),latffor(nhor)                                                         
+  real(kind=realkind) zltrans,zlhfor,zlntrans,zveltrans,&
+       zxtrans,zxhfor,zpar1,zpar2,g2,zslask3,   &
+       zdiffnlev,zdiffhfor,zdifftransh                                                     
+  real(kind=realkind) zveltransst                                                                         
+
+  real(kind=realkind) tsns2(nhor),tsns3(nhor), tsns4(nhor),tsns5(nhor),      &
+       tssn2(nhor),tssn3(nhor),tssn4(nhor),tssn5(nhor),&
+       tsc2(nhor),tsc3(nhor),tsc4(nhor),tsc5(nhor),    &
+       tscsn2(nhor),tscsn3(nhor),tscsn4(nhor),tscsn5(nhor)                                 
+
+  !    work space variables                                                                     
+
+  real(kind=realkind) z3wopl,z3wfor,             &
+       ztforfl,                   &
+       zfliqns2,zfliqns3,zfliqns4,zfliqns5,     &
+       zfliqsc2,zfliqsc3,zfliqsc4,zfliqsc5,     &
+       zfliqscsn2,zfliqscsn3,zfliqscsn4,zfliqscsn5,    &
+       zfliq2opl,zfliq3opl,zfliq2for,zfliq3for
+
+  !     printing
+
+  integer kstep
+  logical lprint,lprint2,lprint3,lprint4,lprint5,lprint6
+  logical lpote
+  logical lt2mmod
+  real(kind=realkind) along(nhor),coslat(nhor),sinlat(nhor),zalat
+  real(kind=realkind) zrdsn
+
+  !    carbon/organic soil
+  real(kind=realkind) vcc_mix1(nhor),vcc_mix2(nhor),vfl_mix1(nhor),vfl_mix2(nhor)
+
+  real(kind=realkind) globtab(0:90)
+  data globtab/1.0_realkind,0.851_realkind,0.712_realkind,0.589_realkind,&
+       0.490_realkind,0.421_realkind,0.384_realkind, &
+       0.356_realkind,0.331_realkind,0.311_realkind,&
+       0.295_realkind,0.281_realkind,0.266_realkind,0.252_realkind,&
+       0.240_realkind,0.230_realkind,0.222_realkind,0.215_realkind,0.208_realkind,  &
+       0.201_realkind,0.195_realkind,0.189_realkind,0.183_realkind,&
+       0.177_realkind,0.171_realkind,0.166_realkind,0.160_realkind,0.155_realkind,  &
+       0.151_realkind,0.148_realkind,0.145_realkind,0.143_realkind,&
+       0.141_realkind,0.139_realkind,0.137_realkind,0.134_realkind,0.132_realkind,  &
+       0.131_realkind,0.129_realkind,0.127_realkind,0.125_realkind,&
+       0.123_realkind,0.121_realkind,0.120_realkind,0.118_realkind,0.117_realkind,  &
+       0.115_realkind,0.114_realkind,0.112_realkind,0.111_realkind,&
+       0.110_realkind,0.109_realkind,0.108_realkind,0.107_realkind,0.105_realkind,  &
+       0.104_realkind,0.103_realkind,0.102_realkind,0.101_realkind,32*0.1_realkind/
+
+  !    snowmip                                                                                  
+  real(kind=realkind) swnetsrfopn,swupopn,lwnetsrfopn,lwupopn,swnetcan,swnetsrf,    &
+       swup,lwnetsrf,lwup,lwdnsrf                                                               
+
+  real(kind=realkind) zrsfor,zra,zrsminfor,zrsminopl,   &
+       rsafor,rsaopl,alfafor,alfaopl,alb,&
+       zf,zf1,zf2,zf3,zf4,zf6,ww,     &
+       zrduc,zrd,zrb                                                                       
+  real(kind=realkind) zrdred,zconvredcoef,zconvred                                                        
+  integer isoil                                                                                 
+
+  real(kind=realkind) zbouy,zweight                                                                            
+  real(kind=realkind) alfa(2),env
+  real(kind=realkind) tdpre                                                                               
+  real(kind=realkind) rh2mfor(nhor),rh2mopsn(nhor),rh2ml(nhor)                                                 
+
+
+  !     define local constants                                                                  
+  zfrlim=0.01_realkind                                                                              
+  zqlim=0.0001_realkind                                                                             
+  zueps=0.1_realkind                                                                               
+  zroumin=5.e-5_realkind                                                                            
+  zqb=5._realkind                                                                                   
+  zqc=5._realkind                                                                                   
+  zqd=5._realkind                                                                                   
+  zqdh=1._realkind                                                                                  
+  zrpi4=pi/4._realkind                                                                              
+  zcrdq=1._realkind/epsilo-1._realkind                                                                       
+  zcams3=3._realkind*zqb*zqc*carman**2                                                              
+  zcons1=ccpq*cpair                                                                        
+
+  zsl1=2._realkind*rair*gravit*carman/cpair                                                         
+  zsl11=0.61_realkind*cpair                                                                         
+  z2m=2._realkind                                                                                   
+  z10m=10._realkind                                                                                 
+  zrkar=1._realkind/carman                                                                          
+  zm=4._realkind*zrkar                                                                              
+  zhm=zm                                                                                   
+  zq=zm                                                                                    
+  zrepac=1._realkind/(epsilo*acrit)                                                                 
+  zlb=10._realkind                                                                                  
+  ztdum=280._realkind                                                                               
+  zcharg=0.032_realkind/gravit                                                                      
+  zcrit=acrit                                                                              
+  zepcr=acrit*epsilo                                                                       
+  zsecu=1.e-7_realkind                                                                              
+  zl2lim=-4.0_realkind                                                                                   
+
+  zzilitin=0.1_realkind                                                                             
+  zcvis=0.14e-4_realkind                                                                                 
+
+  ztdumout=99._realkind                                                                             
+  zqdumout=-1.e-2_realkind                                                                          
+  zudumout=99._realkind                                                                             
+  zrhdumout=0._realkind                                                                                  
+
+  !     initialize arrays                                                                            
+
+  do 10  jl=kstart,kstop                                                                   
+     eg(jl)=0.0_realkind                                                                             
+     etropl1(jl)=0.0_realkind                                                                        
+     etropl2(jl)=0.0_realkind                                                                        
+     etropl3(jl)=0.0_realkind                                                                        
+     etrfor1(jl)=0.0_realkind                                                                        
+     etrfor2(jl)=0.0_realkind                                                                        
+     etrfor3(jl)=0.0_realkind                                                                        
+     evhvfor(jl)=0.0_realkind                                                                        
+     evhvopl(jl)=0.0_realkind                                                                        
+     latfnsbs(jl)=0.0_realkind                                                                       
+     senfns(jl)=0.0_realkind                                                                         
+     latfns(jl)=0.0_realkind                                                                         
+     evapns(jl)=0.0_realkind                                                                         
+     radfns(jl)=0.0_realkind                                                                         
+     senfc(jl)=0.0_realkind                                                                          
+     latfc(jl)=0.0_realkind                                                                          
+     evapc(jl)=0.0_realkind                                                                          
+     radfc(jl)=0.0_realkind                                                                          
+     senfsn(jl)=0.0_realkind                                                                         
+     latfsn(jl)=0.0_realkind                                                                         
+     evapsn(jl)=0.0_realkind                                                                         
+     radfsn(jl)=0.0_realkind                                                                         
+     senfsc(jl)=0.0_realkind                                                                         
+     latfsc(jl)=0.0_realkind                                                                         
+     evapsc(jl)=0.0_realkind                                                                         
+     radfsc(jl)=0.0_realkind                                                                         
+     dhdtsns(jl)=0.0_realkind                                                                        
+     dhdtsn(jl)=0.0_realkind                                                                         
+     dhcdtc(jl)=0.0_realkind                                                                         
+     dhcdtsc(jl)=0.0_realkind                                                                        
+     dhscdtsc(jl)=0.0_realkind                                                                       
+     dhscdtc(jl)=0.0_realkind                                                                        
+     tseff(jl)=0.0_realkind                                                                          
+     t2ml(jl)=0.0_realkind                                                                           
+     q2ml(jl)=0.0_realkind                                                                           
+     t2mopsn(jl)=0.0_realkind                                                                        
+     t2mfor(jl)=0.0_realkind                                                                         
+     rh2ml(jl)=0.0_realkind                                                                          
+     rh2mopsn(jl)=0.0_realkind                                                                       
+     rh2mfor(jl)=0.0_realkind                                                                        
+     senfl(jl)=0.0_realkind                                                                          
+     latfl(jl)=0.0_realkind                                                                          
+     evapl(jl)=0.0_realkind                                                                          
+     ustarl(jl)=0.0_realkind                                                                         
+     senfsnc(jl)=0.0_realkind                                                                        
+     latfsnc(jl)=0.0_realkind                                                                        
+     evapsnc(jl)=0.0_realkind                                                                        
+     radfsnc(jl)=0.0_realkind                                                                        
+     dhcdtsnc(jl)=0.0_realkind                                                                       
+     dhsncdtc(jl)=0.0_realkind                                                                       
+     dhsncdtsnc(jl)=0.0_realkind                                                                     
+     dsenfnsdtns(jl)=0.0_realkind                                                                    
+     dlatfnsdtns(jl)=0.0_realkind                                                                    
+     dsenfsndtsn(jl)=0.0_realkind                                                                    
+     dlatfsndtsn(jl)=0.0_realkind                                                                    
+     dsenfcdtc(jl)=0.0_realkind                                                                      
+     dlatfcdtc(jl)=0.0_realkind                                                                      
+     dsenfcdtsc(jl)=0.0_realkind                                                                     
+     dlatfcdtsc(jl)=0.0_realkind                                                                     
+     dsenfcdtsnc(jl)=0.0_realkind                                                                    
+     dlatfcdtsnc(jl)=0.0_realkind                                                                    
+     dsenfscdtsc(jl)=0.0_realkind                                                                    
+     dlatfscdtsc(jl)=0.0_realkind                                                                    
+     dsenfscdtc(jl)=0.0_realkind                                                                     
+     dlatfscdtc(jl)=0.0_realkind                                                                     
+     dsenfsncdtsnc(jl)=0.0_realkind                                                                  
+     dlatfsncdtsnc(jl)=0.0_realkind                                                                  
+     dsenfsncdtc(jl)=0.0_realkind                                                                    
+     dlatfsncdtc(jl)=0.0_realkind                                                                    
+
+     dlatfvegopldtns(jl)=0.0_realkind                                                                
+     dlatfsoilopldtns(jl)=0.0_realkind                                                               
+     latsnowcan(jl)=0.0_realkind                                                                     
+     vegvel(jl)=0.0_realkind                                                                         
+     evopl(jl)=0.0_realkind                                                                          
+
+     etrfor(jl)=0.0_realkind                                                                         
+     etropl(jl)=0.0_realkind                                                                         
+     esn(jl)=0.0_realkind                                                                            
+
+     weightbs(jl)=0.0_realkind                                                                       
+     weightopv(jl)=0.0_realkind                                                                      
+     weightsn(jl)=0.0_realkind                                                                       
+
+10 enddo
+
+  !      computations over land                                                                 
+  zveglim=0.01_realkind                                                                             
+  zdko=0.25_realkind                                                                                
+  z23=2._realkind/3._realkind                                                                                
+
+  !    ps030423                                                                                 
+  !    ps test to increse resistance between forest                                             
+  !    ps floor and canopy air                                                                  
+
+  zrdred=5._realkind                                                                                
+  !    snowmip2                                                                                 
+  !    zrdred=20.                                                                               
+  !    ps040611       zrdred=10.                                                                
+  !    the reduction of zvegmaxfor for 100% convective prec:                                    
+  !    ps090618       zconvredcoef=0.2                                                          
+  zconvredcoef=1.0_realkind                                                                         
+  !    ps       zconvredcoef=0.6                                                                
+
+  lt2mmod=.false.                                                                          
+
+  do 40  jl=kstart,kstop                                                                   
+     zalat=acos(coslat(jl))*180._realkind/pi                                                        
+     if(sinlat(jl)<0._realkind)zalat=-zalat                                                      
+
+     z3wopl=soil3wopl(jl)                                                                  
+     z3wfor=soil3wfor(jl)                                                                  
+     if( frland(jl)>zfrlim ) then                                                       
+        zlandon=1.0_realkind                                                                        
+        zlandoff=0.0_realkind                                                                       
+        isoil=nint(soiltype(jl))                                                           
+     else                                                                                  
+        zlandon=0.0_realkind                                                                        
+        zlandoff=1.0_realkind                                                                       
+        !    faked:                                                                                   
+        isoil=6                                                                            
+     endif
+
+     !    in case the field would not be complete... check:                                        
+     if(isoil< 1 .or. isoil> 12) then                                                
+        isoil=6                                                                            
+     endif
+     zhnlev=gpot(jl,nlev)/gravit                                                           
+     clog=-zhnlev*gravit/rair/288.15_realkind                                                            
+
+     !        weight fractions of surface types                                                    
+
+     !    zsnw = part of land covered with snow                                                    
+
+     zsnw=frsnw(jl)                                                                        
+
+     !    zfrop (no tree area) + zcw (tree area)                                                   
+
+     zfrop=frop(jl)                                                                        
+     zcw=frcw(jl)                                                                          
+
+     !    zfrsnfor = part of forest covered with snow                                              
+
+     zfrsnfor=frsnfor(jl)                                                                  
+
+     zlai_conif=lai_conif(jl)                                                              
+
+     !    forest lai weighted from deciduous (with fraction frdecid(jl))                           
+     !    and coniferous part                                                                      
+
+     zlaifor_int=       frdecid(jl)*lai_decid(jl) +    &
+          (1._realkind - frdecid(jl))*zlai_conif                                                    
+     zlaifor_int=max(zlaifor_int,0.01_realkind)                                                     
+     zlaiopn_int=laiopn_int(jl)                                                            
+     zlaiopn_int=max(zlaiopn_int,0.01_realkind)                                                     
+
+     !    set open-land vegetation cover according to field                                        
+     zvegopl=vegopl(jl)                                                                    
+     !    ps050103      zvegfor=vegfor(jl)                                                         
+     zvegfor=0.99_realkind                                                                          
+
+     !    setting of vegetation parameters                                                         
+
+     !    minimum surface resistance:                                                              
+     zrsminfor=(1._realkind-frdecid(jl))/max(rsmin_t2(jl),10._realkind)+ &
+          frdecid(jl)/max(rsmin_t3(jl),10._realkind)                                                
+     zrsminfor=1._realkind/zrsminfor                                                                
+     zrsminfor=max(zrsminfor,150._realkind)                                                         
+     zrsminopl=rsmin_t1(jl)                                                                
+     zrsminopl=max(zrsminopl,40._realkind)                                                          
+     !    surface resistance dependency on radiation parameter                                     
+     !    (rgl in noilon/planton page 544):                                                        
+     rsafor=30._realkind                                                                            
+     rsaopl=100._realkind                                                                           
+     !    empirical parameter (g in noilon/planton page 544, formula 36):                          
+     alfafor=0.04_realkind                                                                          
+     alfaopl=0._realkind                                                                            
+     !    height of vegetation:                                                                    
+     zhfor=15._realkind                                                                             
+     !    zhopl=0.5                                                                                
+     !    vegetation momentum roughness:                                                                
+
+     !cps111107 zroughopl=max(z0_t1(jl),0.2_realkind)                                                          
+     zroughopl=max(z0_t1(jl),0.05_realkind)                                                          
+     !                                                                                             
+     zlnrou=                      &
+          (1._realkind-frdecid(jl))/(log(zlb/max(z0_t2(jl),0.1_realkind)))**2 +&
+          frdecid(jl)/(log(zlb/max(z0_t3(jl),0.1_realkind)))**2+zlandoff                           
+     zroughfor=zlandon*zlb*exp(max(-89._realkind,-sqrt(1._realkind/zlnrou))) +     &
+          0.8_realkind*zlandoff                                                                     
+     zroughfor=max(zroughfor,0.1_realkind)                                                          
+     !    ps020704         zroughsn=0.002                                                          
+     !    ps050802         zroughsn=0.0002                                                         
+     zroughsn=0.005_realkind                                                                        
+     !    water stress parameters:                                                                 
+     zlarsmopl=zlaiopn_int/zrsminopl                                                       
+     zlarsmfor=zlaifor_int/zrsminfor                                                       
+     !    soil surface resistance parameters:                                                      
+     zstresopl=0.9_realkind                                                                         
+     zstresfor=0.9_realkind                                                                         
+     !    leaf inclination                                                                         
+     zleafinc=0.28_realkind                                                                         
+     !    adjustment factor for wind speed below transition level                                  
+     g2=0.75_realkind                                                                              
+     !                                                                                             
+     !    if glacier ice:                                                                          
+     !    ps         if(isoil==8) then                                                           
+     !    ps           zvegopl=0.                                                                  
+     !    ps           isoil=4                                                                     
+     !    ps         endif                                                                              
+
+     !    surface and soil temperatures                                                            
+
+     zqam=max(q(jl,nlev),zqlim)                                                            
+     ztam=t(jl,nlev) +gpot(jl,nlev)/cpair                                                  
+     ztsns=tsns(jl)                                                                        
+     ztsns = ztsns*zlandon +ztdum*zlandoff                                                 
+     ztc=tc(jl)                                                                            
+     ztsn=tsnow(jl)                                                                        
+     ztsnc=tsnc(jl)                                                                        
+     ztsc=tsc(jl)                                                                          
+     ztca=tca(jl)                                                                          
+     zqca=q2mfor(jl)                                                                       
+
+     !    maximize zqca to the saturation value corresponing to ztca                               
+
+     !    ps         zqsdifca=zepcr*esati(ztca)/                                                   
+     !    ps     &        (ps(jl)-(1.-epsilo)*zcrit*esati(ztca))                                   
+     !    ps050623         zqca=min(zqca,zqsdifca)                                                 
+
+     !    weighted forest floor temperature                                                        
+
+     ztforfl=ztsc*(1._realkind-zfrsnfor)+ztsnc*zfrsnfor                                             
+
+     zdens=dph(jl,nlev+1)/gpot(jl,nlev)                                                         
+
+     !    net radiation balances                                                                        
+
+     !    zrads is downward short wave radiation (common for all surfaces)                         
+     !    zradl is downward long wave radiation (common for all surfaces)                          
+
+     zscos=0.2_realkind/(1._realkind+scos(jl)) - 0.12_realkind                                                        
+     zalb = albedo(jl) + zscos                                                             
+     zrads=sswdn(jl)                                                                       
+     !                                                                                             
+     zradf = radf(jl)-zrads*(1._realkind-zalb)                                                      
+     zradl = zradf/emskin(jl) + stebol*tskin(jl)**4                                             
+
+     !    compute radf for snow, assuming longwave radiation towards                               
+     !    surface is the same as that of whole gridsquare.                                         
+
+     zalbsn = albsnowl(jl) + zscos                                                         
+     zsswr = (1._realkind-zalbsn)*zrads                                                             
+
+
+     !    emissivity for open land snow is expressed as a function                                 
+     !    of albedo of open land snow                                                              
+
+     zemsnowl=(albsnowl(jl)-albsnlmin)/(albsnlmax-albsnlmin)                               
+     zemsnowl=min(max(zemsnowl,0._realkind),1._realkind)                                                     
+     zemsnowl=zemsnowl*(emsnlmax-emsnlmin)+emsnlmin                                        
+     radfsn(jl)=zsswr + zemsnowl*(zradl-stebol*ztsn**4)                                    
+     swnetsrfopn=zsswr                                                                     
+     swupopn=zalbsn*zrads                                                                       
+
+     !    for guess use predefined values of albedo and emissivity as specified in inisurf.f       
+
+     if(use_guess)then                                                                     
+        if(abs(soiltype(jl)-2.0_realkind)<1.e-14_realkind)then                                                        
+           zalbsoil=albdesert                                                              
+           zemsoil=emdesert                                                                
+        else                                                                               
+           zalbsoil=alboplsoil                                                             
+           zemsoil=emoplsoil                                                               
+        endif
+        zalbopl=zvegopl*alboplveg+(1._realkind-zvegopl)*zalbsoil                                    
+        zalbfor=albforconif*(1._realkind-frdecid(jl))+albfordecid*frdecid(jl)                       
+        zemopl=zvegopl*emoplveg+(1._realkind-zvegopl)*zemsoil                                       
+        zemfor=emforconif*(1._realkind-frdecid(jl))+emfordecid*frdecid(jl)                          
+
+     else                                                                                  
+        !    else use values of albedo and emissivity as specified by ecoclimap                       
+
+        zalbopl=alb_t1(jl)                                                                 
+        zalbfor=(1._realkind-frdecid(jl))*alb_t2(jl)+frdecid(jl)*alb_t3(jl)                         
+        zemopl=emis_t1(jl)                                                                 
+        zemfor=(1._realkind-frdecid(jl))*emis_t2(jl)+frdecid(jl)*emis_t3(jl)                        
+     endif
+
+     !    compute radf for no snow, assuming longwave radiation towards                            
+     !    surface is the same as that of whole gridsquare                                               
+
+     zalb = zalbopl + zscos                                                                
+
+     zsswr = (1._realkind-zalb)*zrads                                                               
+     if(use_guess)then                                                                     
+        swrad_net_opl(jl)=zsswr                                                            
+     endif
+
+     radfns(jl)=zsswr + zemopl*(zradl-stebol*ztsns**4)                                     
+
+     lwnetsrfopn=(zsnw*zemsnowl*(zradl-stebol*ztsn**4)+&
+          zfrop*zemopl*(zradl-stebol*ztsns**4))/&
+          (zsnw+zfrop+zlandoff)                                                            
+     lwupopn=(zsnw*zemsnowl*stebol*ztsn**4 +    &
+          zfrop*zemopl*stebol*ztsns**4)/(zsnw+zfrop+zlandoff)                              
+     swnetsrfopn=(zsnw*swnetsrfopn+zfrop*zsswr)/&
+          (zsnw+zfrop+zlandoff)
+     swupopn=(zsnw*swupopn+zfrop*zalb*zrads)/(zsnw+zfrop+zlandoff)
+
+     !     compute radf for canopy and for surface below canopy,
+     !     assuming longwave radiation towards
+     !     surface is the same as that of whole gridsquare
+
+     !     short-wave radiation for the canopy
+
+     zalb = zalbfor + zscos
+     zsswrc = (1._realkind-zalb)*zrads
+     zalb = albforfloor + zscos                   
+     zsswrsc = (1._realkind-zalb)*zrads
+     zalb = albsnfor + zscos
+     zsswrsnc = (1._realkind-zalb)*zrads
+
+     zsswrsc=zsswrc
+
+
+     if(use_guess)then
+        swrad_net_for(jl)=zsswrc
+     endif
+
+     zviewfl=exp(max(-89._realkind,-0.5_realkind*zlaifor_int))
+     !     ps070611         zviewfs=zviewfl
+     zsolar=90._realkind-acos(scos(jl))*180._realkind/pi
+     zviewfs=exp(max(-89._realkind,-0.5_realkind*zlaifor_int*(4._realkind-3._realkind*scos(jl))))
+
+     !     correction for no  direct short wave radiation 
+
+     zgldiffuse = cov2d(jl) + (1._realkind-cov2d(jl)) *globtab(nint(zsolar))
+     zviewfs= (1._realkind-zgldiffuse)*zviewfs+zgldiffuse*zviewfl
+
+     zlwupforfloor=stebol*(emforfloor*(1._realkind-zfrsnfor)*ztsc**4+emsnow*zfrsnfor*ztsnc**4)
+
+     zlwdnforfloor=zviewfl*zradl+(1._realkind-zviewfl)*zemfor*stebol*ztc**4
+
+     radfc(jl)=(1._realkind-zviewfs)*zsswrc+(1._realkind-zviewfl)*zemfor*(zradl-  2._realkind*stebol*ztc**4+zlwupforfloor)
+
+     radfsc(jl)=zviewfs*zsswrsc+emforfloor*(zlwdnforfloor- stebol*ztsc**4)
+
+     swnetcan=(1._realkind-zviewfs)*zsswrc
+     swnetsrf=zviewfs*zsswrsc*(1._realkind-zfrsnfor)
+
+     radfsnc(jl)=zviewfs*zsswrsnc+emsnow*(zlwdnforfloor- stebol*ztsnc**4)
+
+     lwnetsrf=emforfloor*zlwdnforfloor*(1._realkind-zfrsnfor)+ emsnow*zlwdnforfloor*zfrsnfor- zlwupforfloor
+
+     lwdnsrf=zviewfl*zradl+zemfor*stebol*(1._realkind-zviewfl)*ztc**4
+
+     lwup=zemfor*stebol*(1._realkind-zviewfl)*ztc**4+zviewfl*zlwupforfloor
+
+     swnetsrf=swnetsrf+zviewfs*zsswrsnc*zfrsnfor
+     swup=(1._realkind-zviewfs)*(zalbfor + zscos)*zrads+ &
+          zviewfs*zrads*((zalbfor + zscos)*(1._realkind-zfrsnfor)+ (albsnfor + zscos)*zfrsnfor)
+
+     !     specific humidity at saturation
+
+     !     also define a not used dummy-value
+
+     zqsdum=zepcr*esati(273._realkind)/ps(jl) 
+
+     zqsdifns=zepcr*esati(ztsns)/(ps(jl)-(1._realkind-epsilo)*zcrit*esati(ztsns))
+     zqsdifc=zepcr*esati(ztc)/(ps(jl)-(1._realkind-epsilo)*zcrit*esati(ztc))
+     zqsdifsn=zepcr*esati(ztsn)/(ps(jl)-(1._realkind-epsilo)*zcrit*esati(ztsn))     
+     zqsdifsc=zepcr*esati(ztsc)/(ps(jl)-(1._realkind-epsilo)*zcrit*esati(ztsc))
+     zqsdifsnc=zepcr*esati(ztsnc)/(ps(jl)-(1._realkind-epsilo)*zcrit*esati(ztsnc))
+
+     !     safe coding
+
+     !     ps080512         if(zsnw<zfrlim)zqsdifsn=zqsdum
+     !     ps080512         if(zfrop<zfrlim)zqsdifns=zqsdum
+     !     ps080512         if((zcw*(1.-zfrsnfor))<zfrlim)zqsdifsc=zqsdum
+     !     ps080512         if(zcw<zfrlim)zqsdifc=zqsdum
+     !     ps080512         if((zcw*zfrsnfor)<zfrlim)zqsdifsnc=zqsdum
+
+     !     vaporization heats
+
+     !       zlatns = latvap+latice*(0.5-sign(0.5,ztsns-tmelt))!MARCO
+     env = 1.0_realkind
+     alfa(1) = latvap + latice/(2.0_realkind*env)*(tmelt+env)
+     alfa(2) = -latice/(2.0_realkind*env)
+     zlatns = latvap
+     if(abs(ztsns-tmelt)<=env)then
+        zlatns = alfa(1) +  alfa(2)*ztsns
+     elseif(ztsns-tmelt<=-env)then
+        zlatns = latvap+latice
+     endif
+
+     !     vapourization heat for snow is always latvap + latice
+     !       zlatsn = latvap+latice*(0.5-sign(0.5,ztsn-tmelt))!MARCO
+     zlatsn = latvap
+     if(abs(ztsn-tmelt)<=env)then
+        zlatsn = alfa(1) +  alfa(2)*ztsn
+     elseif(ztsn-tmelt<=-env)then
+        zlatsn = latvap+latice
+     endif
+
+#ifdef SNOWINT
+     !zlatc = latvap+latice*(0.5-sign(0.5,ztc-tmelt))!MARCO
+     zlatc = latvap
+     if(abs(ztc-tmelt)<=env)then
+        zlatc = alfa(1) +  alfa(2)*ztc
+     elseif(ztc-tmelt<=-env)then
+        zlatc = latvap+latice
+     endif
+     !     ps011218 in practice zlatc is used for plus-degrees expect for
+     !     ps011218 evaporation of intercepted water at minus-degrees. however,
+     !     ps011218 use latvap in this case also since tha water is not frozen.
+#else
+     zlatc = latvap
+#endif
+     !zlatsc = latvap+latice*(0.5-sign(0.5,ztsc-tmelt))!MARCO
+     zlatsc = latvap
+     if(abs(ztsc-tmelt)<=env)then
+        zlatsc = alfa(1) +  alfa(2)*ztsc
+     elseif(ztsc-tmelt<=-env)then
+        zlatsc = latvap+latice
+     endif
+
+     !     vapourization heat for snow is always latvap + latice
+     !zlatsnc = latvap+latice*(0.5-sign(0.5,ztsnc-tmelt)) !MARCO
+     zlatsnc = latvap
+     if(abs(ztsnc-tmelt)<=env)then
+        zlatsnc = alfa(1) +  alfa(2)*ztsnc
+     elseif(ztsnc-tmelt<=-env)then
+        zlatsnc = latvap+latice
+     endif
+
+     !     convective part of total precipitataion
+     !     ps090526
+     zslask=0._realkind
+     if((drolddt(jl)+dsolddt(jl))>0._realkind)then
+        zslask=(raincv_kf(jl)+snowcv_kf(jl))/ (drolddt(jl)+dsolddt(jl))
+        zslask=max(0._realkind,min(1._realkind,zslask))
+     endif
+     zslask=1._realkind-zslask
+     zconvred=zslask*(1._realkind-zconvredcoef)+zconvredcoef
+     !     ps090526
+
+     !     forest calculations
+
+     !     l	leaf drag coefficient, cd
+     !     l	eq b7 sellers 1996
+
+     zreveg=1._realkind*0.02_realkind/0.15e-4_realkind
+     zcdveg=1.328_realkind*(2._realkind/sqrt(zreveg))+0.45_realkind*zleafinc**1.6_realkind
+
+     ztransh = zhfor + 11.785_realkind * zroughfor
+
+     !     l	displacement height, zdisph
+     !     l	eq 20 choudhury and monteith, 1988
+     zdisph=1.1_realkind*zhfor*log(1._realkind+(zcdveg*zlaifor_int)**(1._realkind/4._realkind))
+     zdisph=min(zdisph,zhfor-zroughfor-0.3_realkind)
+
+     !     ps090506         zdiffnlev=max(zhnlev-zdisph,10.)
+     ztransh=min(ztransh,0.7_realkind*zhfor+0.3_realkind*zhnlev)
+     zdiffnlev=max(zhnlev-zdisph,3._realkind)
+     zdifftransh=max(ztransh-zdisph,0.5_realkind)
+     zdiffhfor=max(zhfor-zdisph,0.1_realkind)
+
+     !     l    temporary friction velocity (based on neutral conditions)
+     zdup2=max( u(jl,nlev)**2 + v(jl,nlev)**2,zueps )
+     zvel=sqrt(zdup2)
+     !     ps030106
+     !     ps  include stability in calculation of wind speed at tree top
+     zvirnl=1._realkind+zcrdq*zqam
+
+     z03=rair*clog/zdup2
+     zriq =-z03*( gpot(jl,nlev)/(cpair+zcons1*zqam) + zvirnl*t(jl,nlev) )
+
+     !     z/z0+1 = (rough(jl)+zhnlev)/rough(jl) ; z=height of level nlev
+
+     zslask=(zroughfor+zdiffnlev)/zroughfor
+     z01=1._realkind/(log(zslask))**2
+     z02=sqrt(zslask)*z01
+     zcneut=z01*(carman**2)
+     !         calculation of richardson number ( zri ) for  preliminary surface
+     !         temperature  ztseff.
+     !         here ztseff is defined for forest only
+
+     !         calculate effective ground temperature for land
+
+     ztseff = ztca
+
+     zri=zriq + z03 *( 1._realkind+zcrdq*zqca)*ztseff
+
+     if( zri>0.0_realkind ) then
+        zstaon=1.0_realkind
+        zstaoff=0.0_realkind
+     else
+        zstaon=0.0_realkind
+        zstaoff=1.0_realkind
+     endif
+
+     zria=abs(zri)
+
+     !     stable richardson number > 0.
+     !     (formulae according to louis et al,1982)
+     zdr=2.0_realkind*zqb*zria/sqrt(1._realkind +zqd*zria)
+     zcdrag=zcneut/( 1._realkind +zdr )
+
+     !     unstable richardson number
+     !     (louis et al,1982: ecmwf)
+     zfmx=zqb*zria/(1._realkind+z02*zcams3*sqrt(zria))
+     zslask=zcneut*(1._realkind+3._realkind*zfmx)
+     zcdrag=zstaoff*zcneut*(1._realkind+2._realkind*zfmx) +zstaon*zcdrag
+
+     zustar=sqrt(zcdrag*zdup2)
+     !     au/tido060523         zustar=max(zustar,0.01)
+     zustar=max(zustar,0.03_realkind)
+
+
+     ztotf=senffor(jl) +zsl11*t(jl,nlev)*latffor(jl)/latvap
+     zmoin=zsl1*ztotf/( 2._realkind*(ps(jl)-dph(jl,nlev+1))*zustar**3 )
+
+
+     !     stable case zunson=0, unstable zunson=1
+
+     if( ztotf<0.0_realkind ) then
+        zunson=1.0_realkind
+        zunsoff=0.0_realkind
+     else
+        zunson=0.0_realkind
+        zunsoff=1.0_realkind
+     endif
+
+     zslask2=-zm*zustar/zvel
+
+     zltrans=zdifftransh*zmoin
+     zlhfor=zdiffhfor*zmoin
+
+     !     stable case
+
+     zslask=max(-89._realkind,zunson + zunsoff*zslask2*zltrans)
+     zslask3=max(-89._realkind,zunson + zunsoff*zslask2*zlhfor)
+
+     zveltrans=zustar*zrkar*log(zdifftransh/zroughfor)+  zvel*(1._realkind-exp(zslask))
+     zveltrans=max(zueps,zveltrans)
+     zveltransst=zveltrans
+
+     zlntrans=zustar*zrkar*log(zdifftransh/zdiffhfor)
+
+     zpar1=g2*(zlntrans-zvel*(exp(zslask)-  exp(zslask3)))
+     zpar1=zveltrans-(zunson + zunsoff*zpar1)
+
+     !     unstable case
+
+     zxtrans=zunson*(1._realkind-15._realkind*zltrans) + zunsoff
+     zxtrans=sqrt(sqrt(zxtrans))
+     zxhfor=zunson*(1._realkind-15._realkind*zlhfor) + zunsoff
+     zxhfor=sqrt(sqrt(zxhfor))
+
+     zveltrans=zustar*zrkar*(log(zdifftransh/zroughfor)- &
+          (log((1._realkind+zxtrans*zxtrans)/2._realkind)+ &
+          2._realkind*log((1._realkind+zxtrans)/2._realkind) -2._realkind*atan(zxtrans) + pi/2._realkind) )
+     zveltrans=max(zueps,zveltrans)
+
+     zpar2=log(zdifftransh/zdiffhfor)-    &
+          log((1.0_realkind+zxtrans*zxtrans)/(1.0_realkind+zxhfor*zxhfor))- &
+          2._realkind*(log((1.0_realkind+zxtrans)/(1.0_realkind+zxhfor))- &
+          atan(zxtrans)+atan(zxhfor))
+
+     zpar2=zveltrans-zustar*zrkar*g2*zpar2
+
+     !     wind speed at tree top
+
+     zhvegvel=zunsoff*zpar1+zpar2*zunson
+     zhvegvel = max(zueps,zhvegvel)
+     !     ps         zhvegvel = max(1.e-6,zhvegvel)
+
+     vegvel(jl)=zhvegvel
+
+
+     !         wind speed at canopy top (zhvegvel)
+     !         (according to xue et al. 1991 eq (13)
+
+     !     calculation of delta and in noilon/planton page 544
+
+     zvegmaxfor=0.2_realkind*zvegfor*zlaifor_int
+     zvegmaxfor=zvegmaxfor*zconvred
+     !     ps090526
+
+
+     if( svegfor(jl)<1.e-15_realkind) svegfor(jl)=0._realkind
+     zvegmmfor=svegfor(jl)*rhoh2o
+     !     no interception if tc<=0 degc
+     !     ps020121         if(ztc<=tmelt)zvegmmfor=0.
+     !     sveg can get larger than max in timestepping: 
+     zvegmmfor=min(zvegmmfor,zvegmaxfor)
+     zdeltafor=(zvegmmfor/zvegmaxfor)**z23
+     zdeltaforold=zdeltafor
+
+     !     df020409 calc evaporative efficiency of snow on canopy...
+     !     density for snow on canopy, hedstrom and pomeroy 1998
+     rhosncan=67.92_realkind+51.25_realkind*exp(max(-89._realkind,(tc(jl)-tmelt)/2.59_realkind))
+
+     !     maximum snow on canopy
+     zsnowcanmax=6.3_realkind*(0.27_realkind+46._realkind/rhosncan)*zlaifor_int/rhoh2o
+
+     !     evaporative efficiency, zevapeff
+     !     according to y.nakai, 1999: (betas = zevapeff)
+     if(snowcan(jl)>0._realkind)then
+        zrs=sqrt(snowcan(jl)/zsnowcanmax)
+     else
+        zrs=0._realkind
+     endif
+     !     zevapeff=0.89/(1+exp(-4.7*(zrs-0.45)))
+     zevapeff=0.89_realkind/(1._realkind+exp(max(-89._realkind,-4.7_realkind*(zrs-0.45_realkind))))*zrs**0.3_realkind
+     if(zevapeff<0.01_realkind)zevapeff=0._realkind
+
+     !         surface resistance not involved in iteration
+
+     !     photosynt active radiation
+
+     zf=0.55_realkind*2._realkind*zrads/(rsafor*zlaifor_int)
+     zf1=(1._realkind + zf) / (zf + zrsminfor/5000._realkind)
+     zf1=max (1.e-6_realkind,zf1)
+
+     zf6=1.0_realkind
+     if(use_jarvisco2)then
+       zf6=const_co2only/380.0_realkind
+     endif
+
+
+     !     l	aerodynamic resistance in canopy layer
+     !     l	choudhury and monteith 1988 eq 29
+     zgb=zlaifor_int*2._realkind*0.01_realkind/3._realkind*&
+          sqrt(zhvegvel/0.02_realkind)*&
+          (1._realkind-exp(-3._realkind/2._realkind))
+
+     !     l	aerodynamic resistance below canopy
+     !     l	choudhury and monteith 1988 eq 24 and eq 25
+
+     !     zrduc=carman*carman*(zhfor-zdisph)*zhvegvel/
+     !     & log((zhfor-zdisph)/zroughfor)
+
+     zrduc=carman*carman*zdiffhfor*zhvegvel/log(zdiffhfor/zroughfor)
+
+     zrduc=zhfor*exp(2._realkind)/2._realkind/zrduc*(exp(max(-89._realkind,-2._realkind*0.007_realkind/zhfor))- &
+          exp(max(-89._realkind,-2._realkind*(zdisph+zroughfor)/zhfor)))
+
+     !     l    calculation of bulk richardson number and drag coefficients
+     !     l    for aerodynamic resistance
+     !     l    here z0 for heat for forest is used
+
+     zrey=zustar*zroughfor/zcvis
+     zfact=exp(max(-89._realkind,carman*zzilitin*sqrt(zrey)))
+     !     ps         zrouscw=zroughfor/zfact
+     !cps111107 zrouscw=zroughfor
+     zrouscw=zroughfor/10.0_realkind
+
+     !     z/z0+1 = (rough(jl)+zhnlev)/rough(jl) ; z=height of level nlev
+
+     zslask=(zrouscw+zhnlev)/zrouscw
+     z01=1._realkind/(log(zslask))**2
+     z02=sqrt(zslask)*z01
+     zcneut=z01*(carman**2)
+
+     !         calculation of richardson number ( zri ) for  preliminary surface
+     !         temperature  ztseff.
+     !         here ztseff is defined for forest only
+
+     !         calculate effective ground temperature for land
+
+
+     ztseff = ztca
+
+     zri=zriq + z03 *( 1._realkind+zcrdq*zqca)*ztseff
+
+
+     if( zri>0.0_realkind ) then
+        zstaon=1.0_realkind
+        zstaoff=0.0_realkind
+     else
+        zstaon=0.0_realkind
+        zstaoff=1.0_realkind
+     endif
+
+     zria=abs(zri)
+
+     !     stable richardson number > 0.
+     !     (formulae according to louis et al,1982)
+
+     zdr=2.0_realkind*zqb*zria/sqrt(1._realkind +zqd*zria)
+     zcdrag=zcneut/( 1._realkind +zdr )
+     zdr=2.0_realkind*zqb*zria*sqrt(1._realkind +zqdh*zria)
+     zcdrgh=zcneut/( 1._realkind +zdr )
+
+     !     unstable richardson number
+     !     (louis et al,1982: ecmwf)
+     zfmx=zqb*zria/(1._realkind+z02*zcams3*sqrt(zria))
+     zslask=zcneut*(1._realkind+3._realkind*zfmx)
+     zcdrag=zstaoff*zcneut*(1._realkind+2._realkind*zfmx) +zstaon*zcdrag
+     zcdrgh=zstaoff*zslask +zstaon*zcdrgh
+
+     !     	aerodynamic resistances
+
+     !     aerodynamic resistance for heat='zra'
+     !     ( computation not used if zlandoff=1.)
+
+     !      preliminary zra 
+
+     zra=zlandon/(zcdrgh*zvel) +zlandoff
+
+
+     !     printing started
+
+	 ! South S_AM
+     lprint=.false.
+       if(along(jl)>312.75_realkind .and. along(jl)<313.25_realkind)then
+          if(zalat>-15.25_realkind.and. zalat<-14.75_realkind)then
+             lprint=.true.
+          endif
+       endif
+	 ! EQ S_AM
+     lprint2=.false.
+       if(along(jl)>299.75 .and. along(jl)<300.25)then
+          if(zalat>-1.25.and. zalat<-0.75)then
+             lprint2=.true.
+          endif
+       endif
+	 ! North S_AM
+     lprint3=.false.
+       if(along(jl)>296.75.and. along(jl)<297.25)then
+          if(zalat>6.75.and. zalat<7.25)then
+             lprint3=.true.
+          endif
+       endif
+
+     !     ps       if(kstep<35000)then
+     !     ps         lprint=.false.
+     !     ps         lprint2=.false.
+     !     ps         lprint3=.false.
+     !     ps       endif
+!!     lprint=.false.
+!!     lprint2=.false.
+!!     lprint3=.false.
+     lpote=.false.
+
+
+
+     !     	unstable transfer correction
+     !     	sellers et al. 1986 eq a15 
+     zpisl=9._realkind*gravit*zhfor/(ztforfl*zhvegvel*zhvegvel)
+     zphih=zpisl*(ztforfl-ztca)
+     zphih=max(1.e-6_realkind,zphih)
+     zphih=sqrt(1._realkind+zphih)
+
+     zrd=zrduc/zphih*zrdred
+
+     !     	free convection correction
+     !     	sellers et al. 1986 eq a9
+     zdcant=ztc-ztca
+     zdcant=max(1.e-6_realkind,zdcant)
+     !     zdcant=zlaifor_int/890.*(zdcant/0.02)**(1./4.)
+     zdcant=sqrt(50._realkind*zdcant)
+     zdcant=zlaifor_int*1.1236e-03_realkind *sqrt(zdcant)          
+
+     zrbinv=zgb+zdcant
+     zrb=1._realkind/zrbinv
+
+     !     calculation of resistance for soil evaporation 
+
+     rt1=tmelt+1._realkind
+     rt2=tmelt-3._realkind
+     !     freezing function fstep tsns(jl) = wice/(wwat+wice)
+
+     if(tsns(jl)<=rt2)then
+        zfstep=1.0_realkind
+     elseif(tsns(jl)>rt2.and.tsns(jl)<rt1)then
+        zfstep=0.5_realkind*(sin(pi*(tsns(jl)-0.5_realkind*rt1-0.5_realkind*rt2)/ (rt2-rt1)) + 1.0_realkind)
+     else
+        zfstep=0.0_realkind
+     endif
+     zfliqns = 1.0_realkind - zfstep
+
+     !     freezing function fstep tsc(jl) = wice/(wwat+wice)
+     !     obs! using a weighted top-soil temperature (ztfortops)
+
+     if(tsc(jl)<=rt2)then
+        zfstep=1.0_realkind
+     elseif(tsc(jl)>rt2.and.tsc(jl)<rt1)then
+        zfstep=0.5_realkind*(sin(pi*(tsc(jl)-0.5_realkind*rt1-0.5_realkind*rt2)/  (rt2-rt1)) + 1.0_realkind)
+     else
+        zfstep=0.0_realkind
+     endif
+     zfliqsc = 1.0_realkind - zfstep
+
+     !     surface soil resistance
+     ww=min(1._realkind,(sw1opl(jl)/dz1w-vfl_mix1(jl))/(vcc_mix1(jl)-vfl_mix1(jl)))
+     ww=max(0._realkind,ww)
+     zf2 =  zfliqns*ww
+     zf2=min(1.0_realkind,zf2)
+     zf2=max(1.e-6_realkind,zf2)
+
+     !       zrsoilns=0. MARCO
+     !       if(zqam<zqsdifns)then
+     !          zrsoilns=50./zf2
+     !       endif
+     env = 10.0_realkind*zqlim
+     zrsoilns = 0.0_realkind
+     if(abs(zqam-zqsdifns)<=env)then
+        alfa(1) = 25.0_realkind/(env*zf2)*(zqsdifns+env)
+        alfa(2) = -25.0_realkind/(env*zf2)
+        zrsoilns=alfa(1) + alfa(2)*zqam
+     elseif(zqam-zqsdifns<-env)then
+        zrsoilns=50._realkind/zf2
+     endif
+
+
+
+     ww=min(1._realkind,(sw1for(jl)/dz1w-vfl_mix1(jl))/(vcc_mix1(jl)-vfl_mix1(jl)))
+     ww=max(0._realkind,ww)
+     zf2 =  zfliqsc*ww
+     zf2=min(1.0_realkind,zf2)
+     zf2=max(1.e-6_realkind,zf2)
+     zrsoilsc=0._realkind
+     if(zqca<zqsdifsc)then
+        zrsoilsc=50._realkind/zf2
+     endif
+
+     !     calculations of the surface resistance dependence on soil moisture
+
+     !     obs!! new values on rt1 and rt2 when used for surface resistance!!
+     !     ps020704
+     !     ps070611         rt1=tmelt+4.
+     !     ps070611         rt2=tmelt+2.
+     rt1=tmelt+1._realkind
+     rt2=tmelt-1._realkind
+     !     freezing function fstep ztsns = wice/(wwat+wice)
+     !     ps021010
+     if(tsns(jl)<=rt2)then
+        zfstep=1.0_realkind
+     elseif(tsns(jl)>rt2.and.tsns(jl)<rt1)then
+        zfstep=0.5_realkind*(sin(pi*(tsns(jl)-0.5_realkind*rt1-0.5_realkind*rt2)/(rt2-rt1)) + 1.0_realkind)
+     else
+        zfstep=0.0_realkind
+     endif
+     zfliqns = 1.0_realkind - zfstep
+
+     if(tsns2(jl)<=rt2)then
+        zfstep=1.0_realkind
+     elseif(tsns2(jl)>rt2.and.tsns2(jl)<rt1)then
+        zfstep=0.5_realkind*(sin(pi*(tsns2(jl)-0.5_realkind*rt1-0.5_realkind*rt2)/(rt2-rt1)) + 1.0_realkind)
+     else
+        zfstep=0.0_realkind
+     endif
+     zfliqns2 = 1.0_realkind - zfstep
+
+     if(tsns3(jl)<=rt2)then
+        zfstep=1.0_realkind
+     elseif(tsns3(jl)>rt2.and.tsns3(jl)<rt1)then
+        zfstep=0.5_realkind*(sin(pi*(tsns3(jl)-0.5_realkind*rt1-0.5_realkind*rt2)/(rt2-rt1)) + 1.0_realkind)
+     else
+        zfstep=0.0_realkind
+     endif
+     zfliqns3 = 1.0_realkind - zfstep
+
+     if(tsns4(jl)<=rt2)then
+        zfstep=1.0_realkind
+     elseif(tsns4(jl)>rt2.and.tsns4(jl)<rt1)then
+        zfstep=0.5_realkind*(sin(pi*(tsns4(jl)-0.5_realkind*rt1-0.5_realkind*rt2)/(rt2-rt1)) + 1.0_realkind)
+     else
+        zfstep=0.0_realkind
+     endif
+     zfliqns4 = 1.0_realkind - zfstep
+
+     if(tsns5(jl)<=rt2)then
+        zfstep=1.0_realkind
+     elseif(tsns5(jl)>rt2.and.tsns5(jl)<rt1)then
+        zfstep=0.5_realkind*(sin(pi*(tsns5(jl)-0.5_realkind*rt1-0.5_realkind*rt2)/(rt2-rt1)) + 1.0_realkind)
+     else
+        zfstep=0.0_realkind
+     endif
+     zfliqns5 = 1.0_realkind - zfstep
+
+
+     !     freezing function fstep ztfortops = wice/(wwat+wice)
+     !     obs! using a weighted top-soil temperature (ztfortops)
+
+     !     ps021010
+     if(tsc(jl)<=rt2)then
+        zfstep=1.0_realkind
+     elseif(tsc(jl)>rt2.and.tsc(jl)<rt1)then
+        zfstep=0.5_realkind*(sin(pi*(tsc(jl)-0.5_realkind*rt1-0.5_realkind*rt2)/ (rt2-rt1)) + 1.0_realkind)
+     else
+        zfstep=0.0_realkind
+     endif
+     zfliqsc = 1.0_realkind - zfstep
+
+     if(tsc2(jl)<=rt2)then
+        zfstep=1.0_realkind
+     elseif(tsc2(jl)>rt2.and.tsc2(jl)<rt1)then
+        zfstep=0.5_realkind*(sin(pi*(tsc2(jl)-0.5_realkind*rt1-0.5_realkind*rt2)/(rt2-rt1)) + 1.0_realkind)
+     else
+        zfstep=0.0_realkind
+     endif
+     zfliqsc2 = 1.0_realkind - zfstep
+
+     if(tscsn(jl)<=rt2)then
+        zfstep=1.0_realkind
+     elseif(tscsn(jl)>rt2.and.tscsn(jl)<rt1)then
+        zfstep=0.5_realkind*(sin(pi*(tscsn(jl)-0.5_realkind*rt1-0.5_realkind*rt2)/ (rt2-rt1)) + 1.0_realkind)
+     else
+        zfstep=0.0_realkind
+     endif
+     zfliqscsn = 1.0_realkind - zfstep
+
+     if(tscsn2(jl)<=rt2)then
+        zfstep=1.0_realkind
+     elseif(tscsn2(jl)>rt2.and.tscsn2(jl)<rt1)then
+        zfstep=0.5_realkind*(sin(pi*(tscsn2(jl)-0.5_realkind*rt1-0.5_realkind*rt2)/(rt2-rt1)) + 1.0_realkind)
+     else
+        zfstep=0.0_realkind
+     endif
+     zfliqscsn2 = 1.0_realkind - zfstep
+
+     !     freezing function fstep ztsd = wice/(wwat+wice)
+
+     if(tsc3(jl)<=rt2)then
+        zfstep=1.0_realkind
+     elseif(tsc3(jl)>rt2.and.tsc3(jl)<rt1)then
+        zfstep=0.5_realkind*(sin(pi*(tsc3(jl)-0.5_realkind*rt1-0.5_realkind*rt2)/(rt2-rt1)) + 1.0_realkind)
+     else
+        zfstep=0.0_realkind
+     endif
+     zfliqsc3 = 1.0_realkind - zfstep
+
+     if(tscsn3(jl)<=rt2)then
+        zfstep=1.0_realkind
+     elseif(tscsn3(jl)>rt2.and.tscsn3(jl)<rt1)then
+        zfstep=0.5_realkind*(sin(pi*(tscsn3(jl)-0.5_realkind*rt1-0.5_realkind*rt2)/(rt2-rt1)) + 1.0_realkind)
+     else
+        zfstep=0.0_realkind
+     endif
+     zfliqscsn3 = 1.0_realkind - zfstep
+
+     if(tsc4(jl)<=rt2)then
+        zfstep=1.0_realkind
+     elseif(tsc4(jl)>rt2.and.tsc4(jl)<rt1)then
+        zfstep=0.5_realkind*(sin(pi*(tsc4(jl)-0.5_realkind*rt1-0.5_realkind*rt2)/(rt2-rt1)) + 1.0_realkind)
+     else
+        zfstep=0.0_realkind
+     endif
+     zfliqsc4 = 1.0_realkind - zfstep
+
+     if(tscsn4(jl)<=rt2)then
+        zfstep=1.0_realkind
+     elseif(tscsn4(jl)>rt2.and.tscsn4(jl)<rt1)then
+        zfstep=0.5_realkind*(sin(pi*(tscsn4(jl)-0.5_realkind*rt1-0.5_realkind*rt2)/(rt2-rt1)) + 1.0_realkind)
+     else
+        zfstep=0.0_realkind
+     endif
+     zfliqscsn4 = 1.0_realkind - zfstep
+
+     if(tsc5(jl)<=rt2)then
+        zfstep=1.0_realkind
+     elseif(tsc5(jl)>rt2.and.tsc5(jl)<rt1)then
+        zfstep=0.5_realkind*(sin(pi*(tsc5(jl)-0.5_realkind*rt1-0.5_realkind*rt2)/(rt2-rt1)) + 1.0_realkind)
+     else
+        zfstep=0.0_realkind
+     endif
+     zfliqsc5 = 1.0_realkind - zfstep
+
+     if(tscsn5(jl)<=rt2)then
+        zfstep=1.0_realkind
+     elseif(tscsn5(jl)>rt2.and.tscsn5(jl)<rt1)then
+        zfstep=0.5_realkind*(sin(pi*(tscsn5(jl)-0.5_realkind*rt1-0.5_realkind*rt2)/(rt2-rt1)) + 1.0_realkind)
+     else
+        zfstep=0.0_realkind
+     endif
+     zfliqscsn5 = 1.0_realkind - zfstep
+
+     !     weighted forest zfliq-values:
+
+     zfliqsc=zfliqsc*(1._realkind-zfrsnfor)+zfliqscsn*zfrsnfor
+     zfliqsc2=zfliqsc2*(1._realkind-zfrsnfor)+zfliqscsn2*zfrsnfor
+     zfliqsc3=zfliqsc3*(1._realkind-zfrsnfor)+zfliqscsn3*zfrsnfor
+     zfliqsc4=zfliqsc4*(1._realkind-zfrsnfor)+zfliqscsn4*zfrsnfor
+     zfliqsc5=zfliqsc5*(1._realkind-zfrsnfor)+zfliqscsn5*zfrsnfor
+
+     zfliqns=(zfliqns*dz1+zfliqns2*dz2)/(dz1+dz2)
+     zfliqsc=(zfliqsc*dz1+zfliqsc2*dz2)/(dz1+dz2)
+
+     zfliq2for=zfliqsc3
+     if(z3wfor>(dz4+dz5))then
+        zfliq3for=(dz4*zfliqsc4+dz5*zfliqsc5)/(dz4+dz5)
+     elseif(z3wfor>dz4)then
+        zslask=z3wfor-dz4
+        zfliq3for=(dz4*zfliqsc4+zslask*zfliqsc5)/(dz4+zslask)
+     else
+        zfliq3for=zfliqsc4
+     endif
+
+     zfliq2opl=zfliqns3
+     if(z3wopl>(dz4+dz5))then
+        zfliq3opl=(dz4*zfliqns4+dz5*zfliqns5)/(dz4+dz5)
+     elseif(z3wopl>dz4)then
+        zslask=z3wopl-dz4
+        zfliq3opl=(dz4*zfliqns4+zslask*zfliqns5)/(dz4+zslask)
+     else
+        zfliq3opl=zfliqns4
+     endif
+
+     !     ps include wilting point
+
+     !ww=(sw1opl(jl)/dz1w-vfl_mix1(jl)*0.90_realkind)/(zstresopl*vcc_mix1(jl)-vfl_mix1(jl)) !cj110512 wilting point*0.90 for open land
+     ww=(sw1opl(jl)/dz1w-vfl_mix1(jl))/(zstresopl*vcc_mix1(jl)-vfl_mix1(jl))
+     zf21opl=ww*zfliqns
+     zf21opl=min(1.0_realkind,zf21opl)
+     zf21opl=max(0.0_realkind,zf21opl)
+
+     ww=(sw1for(jl)/dz1w-vfl_mix1(jl))/(zstresfor*vcc_mix1(jl)-vfl_mix1(jl))
+     zf21for=ww*zfliqsc
+     zf21for=min(1.0_realkind,zf21for)
+     zf21for=max(0.0_realkind,zf21for)
+
+     !ww=(sw2opl(jl)/dz1w-vfl_mix2(jl)*0.90_realkind)/(zstresopl*vcc_mix2(jl)-vfl_mix2(jl))
+     ww=(sw2opl(jl)/dz1w-vfl_mix2(jl))/(zstresopl*vcc_mix2(jl)-vfl_mix2(jl))
+     zf22opl=ww*zfliq2opl
+     zf22opl=min(1.0_realkind,zf22opl)
+     zf22opl=max(0.0_realkind,zf22opl)
+
+     ww=(sw2for(jl)/dz1w-vfl_mix2(jl))/(zstresfor*vcc_mix2(jl)-vfl_mix2(jl))
+     zf22for=ww*zfliq2for
+     zf22for=min(1.0_realkind,zf22for)
+     zf22for=max(0.0_realkind,zf22for)
+
+     !ww=(sw3opl(jl)/dz1w-vfl(isoil)*0.90_realkind)/(zstresopl*vcc(isoil)-vfl(isoil))
+     ww=(sw3opl(jl)/dz1w-vfl(isoil))/(zstresopl*vcc(isoil)-vfl(isoil))
+     zf23opl=ww*zfliq3opl
+     zf23opl=min(1.0_realkind,zf23opl)
+     zf23opl=max(0.0_realkind,zf23opl)
+
+     ww=(sw3for(jl)/dz1w-vfl(isoil))/(zstresfor*vcc(isoil)-vfl(isoil))
+     zf23for=ww*zfliq3for
+     zf23for=min(1.0_realkind,zf23for)
+     zf23for=max(0.0_realkind,zf23for)
+
+
+
+     !     	surface resistance according to noilhan and planton
+
+
+     !     vapour pressure deficit
+
+     zf3= 1._realkind - alfafor*(zqsdifc-zqca)*1000._realkind
+     zf3=max (1.e-6_realkind,zf3)
+
+     !     air temp
+
+     zf4=1._realkind- 0.0016_realkind*((298.16_realkind-ztca)**2)
+     zf4=max (1.e-6_realkind,zf4)
+
+     !     calculation of surface resistance (noilon/planton page 544)
+
+     !     zrsfor=zrsminfor*zf1/(zlaifor_int*zf2*zf3*zf4)
+
+     !     zrsfor=min(zrsfor,5000.)
+
+     !     here we calculate the conductance (1/rs)
+
+     zqq=zlarsmfor*zf3*zf4/(zf1*zf6)
+     zrq1=1._realkind/(1._realkind + zrb*zqq*zf21for)
+     zrq2=1._realkind/(1._realkind + zrb*zqq*zf22for)
+     zrq3=1._realkind/(1._realkind + zrb*zqq*zf23for)
+
+     zrsrb1=zqq*zf21for*zrq1*frroot1wfor(jl)
+     zrsrb2=zqq*zf22for*zrq2*frroot2wfor(jl)
+     zrsrb3=zqq*zf23for*zrq3*(1._realkind-frroot1wfor(jl)-frroot2wfor(jl))
+     zrsrbsum=zrsrb1+zrsrb2+zrsrb3
+
+
+     !     l    calculation of halsted coefficient np89,p 543:      
+
+     zsifor=max( 0.0_realkind, sign(1.0_realkind, zqsdifc-zqca) )
+
+     !     zhvfor=1.0 - zsifor*(1.0 - zdeltafor)*zrsfor/(zrsfor+zrb)
+
+     zhvfor=1.0_realkind - zsifor*(1.0_realkind - zdeltafor)+ zsifor*(1.0_realkind - zdko*zdeltafor)*zrb*(zrsrbsum)
+
+
+     !     correct value of zrsoilsc in case of dew/evaporation
+
+     zrsoilsc=0._realkind
+     if(zqca<zqsdifsc)then
+        zrsoilsc=50._realkind/zf2
+     endif
+
+     !        calculate new values of ztca and zqca
+#ifdef SNOWINT
+     !     ps030425
+     !     write(6,*)'obs!!!! calculation of zqca is not adjusted'
+     !     write(6,*)'for snow interception!!!'
+#endif
+
+     zsl2=ztam/zra + (ztsc*(1._realkind-zfrsnfor)+ztsnc*zfrsnfor)/zrd+ ztc*zrbinv
+     zsl3=1._realkind/zra+1._realkind/zrd+zrbinv
+     ztca=zsl2/zsl3
+
+     zca1=latvap/zra
+     zca2=zlatc*zhvfor/zrb
+     zca3=zlatsc/(zrsoilsc+zrd)*(1._realkind-zfrsnfor)
+     zca4=zlatsnc/zrd*zfrsnfor
+     zqca=(zqam*zca1+zqsdifc*zca2+zqsdifsc*zca3+zqsdifsnc*zca4)/(zca1+zca2+zca3+zca4)
+
+     !     maximize zqca to the saturation value corresponing to ztca
+
+     !     ps         zqsdifca=zepcr*esati(ztca)/
+     !     ps     &        (ps(jl)-(1.-epsilo)*zcrit*esati(ztca))
+     !     ps050623         zqca=min(zqca,zqsdifca)
+
+
+     !     do the estimation of zra once more:
+
+
+     ztseff = ztca
+
+     zri=zriq + z03 *( 1._realkind+zcrdq*zqca)*ztseff
+
+
+     if( zri>0.0_realkind ) then
+        zstaon=1.0_realkind
+        zstaoff=0.0_realkind
+     else
+        zstaon=0.0_realkind
+        zstaoff=1.0_realkind
+     endif
+
+     zria=abs(zri)
+
+     !     stable richardson number > 0.
+     !     (formulae according to louis et al,1982)
+
+     zdr=2.0_realkind*zqb*zria/sqrt(1._realkind +zqd*zria)
+     zcdrag=zcneut/( 1._realkind +zdr )
+     zdr=2.0_realkind*zqb*zria*sqrt(1._realkind +zqdh*zria)
+     zcdrgh=zcneut/( 1._realkind +zdr )
+
+     !     unstable richardson number
+     !     (louis et al,1982: ecmwf)
+
+     zfmx=zqb*zria/(1._realkind+z02*zcams3*sqrt(zria))
+     zslask=zcneut*(1._realkind+3._realkind*zfmx)
+     zcdrag=zstaoff*zcneut*(1._realkind+2._realkind*zfmx) +zstaon*zcdrag
+     zcdrgh=zstaoff*zslask +zstaon*zcdrgh
+
+     zustar=sqrt(zcdrag*zdup2)
+     !     autido060523         zustar=max(zustar,0.01)
+     zustar=max(zustar,0.03_realkind)
+
+
+     !     l	aerodynamic resistances
+
+
+     !     aerodynamic resistance for heat='zra'
+     !     ( computation not used if zlandoff=1.)
+
+     !     final estimation of  zra a
+
+     zra=zlandon/(zcdrgh*zvel) +zlandoff
+     !     ps080512         if(zcw<zfrlim)zra=100.
+
+     !     store zra for forest in zracw
+
+     zracw=zra
+     !     ps080512         if(zcw<zfrlim)zracw=100.
+
+     !         start iterations to solve for ztca and zqca assuming zra given
+
+
+     !     first iteration
+     zphih=zpisl*(ztsc-ztca)
+     zphih=max(1.e-6_realkind,zphih)
+     zphih=sqrt(1._realkind+zphih)
+
+     zrd=zrduc/zphih*zrdred
+
+     !     l	free convection correction
+     !     l	sellers et al. 1986 eq a9
+
+     zdcant=ztc-ztca
+     zdcant=max(1.e-6_realkind,zdcant)
+     !     zdcant=zlaifor_int/890.*(zdcant/0.02)**(1./4.)
+     zdcant=sqrt(50._realkind*zdcant)
+     zdcant=zlaifor_int*1.1236e-03_realkind *sqrt(zdcant)          
+
+     zrbinv=zgb+zdcant
+     zrb=1._realkind/zrbinv
+
+
+     !     l	surface resistance according to noilhan and planton
+
+
+     !     vapour pressure deficit
+
+     zf3= 1._realkind - alfafor*(zqsdifc-zqca)*1000._realkind
+     zf3=max (1.e-6_realkind,zf3)
+
+     !     air temp
+
+     zf4=1._realkind- 0.0016_realkind*((298.16_realkind-ztca)**2)
+     zf4=max (1.e-6_realkind,zf4)
+
+     !     calculation of surface resistance (noilon/planton page 544)
+
+     !     zrsfor=zrsminfor*zf1/(zlaifor_int*zf2*zf3*zf4)
+
+     !     zrsfor=min(zrsfor,5000.)
+
+     zqq=zlarsmfor*zf3*zf4/(zf1*zf6)
+     zrq1=1._realkind/(1._realkind + zrb*zqq*zf21for)
+     zrq2=1._realkind/(1._realkind + zrb*zqq*zf22for)
+     zrq3=1._realkind/(1._realkind + zrb*zqq*zf23for)
+
+     zrsrb1=zqq*zf21for*zrq1*frroot1wfor(jl)
+     zrsrb2=zqq*zf22for*zrq2*frroot2wfor(jl)
+     zrsrb3=zqq*zf23for*zrq3*(1._realkind-frroot1wfor(jl)-frroot2wfor(jl))
+     zrsrbsum=zrsrb1+zrsrb2+zrsrb3
+
+     !         calculation of halsted coefficient np89,p 543:      
+
+     zsifor=max( 0.0_realkind, sign(1.0_realkind, zqsdifc-zqca) )
+
+     !     zhvfor=1.0 - zsifor*(1.0 - zdeltafor)*zrsfor/(zrsfor+zrb)
+
+     zhvfor=1.0_realkind - zsifor*(1.0_realkind - zdeltafor)+ zsifor*(1.0_realkind - zdko*zdeltafor)*zrb*(zrsrbsum)
+
+     !     correct value of zrsoilsc in case of dew/evaporation
+     zrsoilsc=0._realkind
+     if(zqca<zqsdifsc)then
+        zrsoilsc=50._realkind/zf2
+     endif
+
+     !         calculate new values of ztca and zqca
+     zsl2=ztam/zra + (ztsc*(1._realkind-zfrsnfor)+ztsnc*zfrsnfor)/zrd+ ztc*zrbinv
+     zsl3=1._realkind/zra+1._realkind/zrd+zrbinv
+     ztca=zsl2/zsl3
+
+     zca1=latvap/zra
+     zca2=zlatc*zhvfor/zrb
+     zca3=zlatsc/(zrsoilsc+zrd)*(1._realkind-zfrsnfor)
+     zca4=zlatsnc/zrd*zfrsnfor
+     zqca=(zqam*zca1+zqsdifc*zca2+zqsdifsc*zca3+zqsdifsnc*zca4)/ (zca1+zca2+zca3+zca4)
+
+     !     maximize zqca to the saturation value corresponing to ztca
+
+     !     pscps         zqsdifca=zepcr*esati(ztca)/
+     !     ps     &        (ps(jl)-(1.-epsilo)*zcrit*esati(ztca))
+     !     ps050623         zqca=min(zqca,zqsdifca)
+
+
+
+     !     second iteration
+
+     zphih=zpisl*(ztsc-ztca)
+     zphih=max(1.e-6_realkind,zphih)
+     zphih=sqrt(1._realkind+zphih)
+
+     zrd=zrduc/zphih*zrdred
+
+     !     l	free convection correction
+     !     l	sellers et al. 1986 eq a9
+     zdcant=ztc-ztca
+     zdcant=max(1.e-6_realkind,zdcant)
+     zdcant=zlaifor_int/890._realkind*(zdcant/0.02_realkind)**(1._realkind/4._realkind)
+     zdcant=sqrt(50._realkind*zdcant)
+     zdcant=zlaifor_int*1.1236e-03_realkind *sqrt(zdcant)          
+
+     zrbinv=zgb+zdcant
+     zrb=1._realkind/zrbinv
+
+     !     	surface resistance according to noilhan and planton
+
+     !     b vapour pressure deficit
+
+     zf3= 1._realkind - alfafor*(zqsdifc-zqca)*1000._realkind
+     zf3=max (1.e-6_realkind,zf3)
+
+     !     b air temp
+
+     zf4=1._realkind- 0.0016_realkind*((298.16_realkind-ztca)**2)
+     zf4=max (1.e-6_realkind,zf4)
+
+     !     calculation of surface resistance (noilon/planton page 544)
+
+     !     zrsfor=zrsminfor*zf1/(zlaifor_int*zf2*zf3*zf4)
+
+     !     zrsfor=min(zrsfor,5000.)
+
+     zqq=zlarsmfor*zf3*zf4/(zf1*zf6)
+     zrq1=1._realkind/(1._realkind + zrb*zqq*zf21for)
+     zrq2=1._realkind/(1._realkind + zrb*zqq*zf22for)
+     zrq3=1._realkind/(1._realkind + zrb*zqq*zf23for)
+
+     zrsrb1=zqq*zf21for*zrq1*frroot1wfor(jl)
+     zrsrb2=zqq*zf22for*zrq2*frroot2wfor(jl)
+     zrsrb3=zqq*zf23for*zrq3*(1._realkind-frroot1wfor(jl)-frroot2wfor(jl))
+     zrsrbsum=zrsrb1+zrsrb2+zrsrb3
+
+     !     l    calculation of halsted coefficient np89,p 543:      
+     zsifor=max( 0.0_realkind, sign(1.0_realkind, zqsdifc-zqca) )
+
+     !     zhvfor=1.0 - zsifor*(1.0 - zdeltafor)*zrsfor/(zrsfor+zrb)
+
+     zhvfor=1.0_realkind - zsifor*(1.0_realkind - zdeltafor)+  zsifor*(1.0_realkind - zdko*zdeltafor)*zrb*(zrsrbsum)
+
+     !     correct value of zrsoilsc in case of dew/evaporation
+
+     zrsoilsc=0._realkind
+     if(zqca<zqsdifsc)then
+        zrsoilsc=50._realkind/zf2
+     endif
+
+     !         calculate new values of ztca and zqca
+     zsl2=ztam/zra + (ztsc*(1._realkind-zfrsnfor)+ztsnc*zfrsnfor)/zrd+ ztc*zrbinv
+     zsl3=1._realkind/zra+1.0_realkind/zrd+zrbinv
+     ztca=zsl2/zsl3
+
+     zca1=latvap/zra
+     zca2=zlatc*zhvfor/zrb
+     zca3=zlatsc/(zrsoilsc+zrd)*(1._realkind-zfrsnfor)
+     zca4=zlatsnc/zrd*zfrsnfor
+     zqca=(zqam*zca1+zqsdifc*zca2+zqsdifsc*zca3+zqsdifsnc*zca4)/ (zca1+zca2+zca3+zca4)
+
+     !     maximize zqca to the saturation value corresponing to ztca
+
+     !     ps         zqsdifca=zepcr*esati(ztca)/
+     !     ps     +        (ps(jl)-(1.-epsilo)*zcrit*esati(ztca))
+     !     ps050623         zqca=min(zqca,zqsdifca)
+
+
+     !     third iteration
+
+     zphih=zpisl*(ztsc-ztca)
+     zphih=max(1.e-6_realkind,zphih)
+     zphih=sqrt(1._realkind+zphih)
+
+     zrd=zrduc/zphih*zrdred
+
+     !     l	free convection correction
+     !     l	sellers et al. 1986 eq a9
+
+     zdcant=ztc-ztca
+     zdcant=max(1.e-6_realkind,zdcant)
+     !     zdcant=zlaifor_int/890.*(zdcant/0.02)**(1./4.)
+     zdcant=sqrt(50._realkind*zdcant)
+     zdcant=zlaifor_int*1.1236e-03_realkind *sqrt(zdcant)          
+
+     zrbinv=zgb+zdcant
+     zrb=1._realkind/zrbinv
+
+
+     !     l	surface resistance according to noilhan and planton
+
+     !     b vapour pressure deficit
+
+     zf3= 1._realkind - alfafor*(zqsdifc-zqca)*1000._realkind
+     zf3=max (1.e-6_realkind,zf3)
+
+     !     b air temp
+
+     zf4=1._realkind- 0.0016_realkind*((298.16_realkind-ztca)**2)
+     zf4=max (1.e-6_realkind,zf4)
+
+     !     calculation of surface resistance (noilon/planton page 544)
+
+     !     zrsfor=zrsminfor*zf1/(zlaifor_int*zf2*zf3*zf4)
+
+     !     zrsfor=min(zrsfor,5000.)
+
+     zqq=zlarsmfor*zf3*zf4/(zf1*zf6)
+     zrq1=1._realkind/(1._realkind + zrb*zqq*zf21for)
+     zrq2=1._realkind/(1._realkind + zrb*zqq*zf22for)
+     zrq3=1._realkind/(1._realkind + zrb*zqq*zf23for)
+
+     zrsrb1=zqq*zf21for*zrq1*frroot1wfor(jl)
+     zrsrb2=zqq*zf22for*zrq2*frroot2wfor(jl)
+     zrsrb3=zqq*zf23for*zrq3*(1._realkind-frroot1wfor(jl)-frroot2wfor(jl))
+     zrsrbsum=zrsrb1+zrsrb2+zrsrb3
+
+     !         calculation of halsted coefficient np89,p 543:      
+     zsifor=max( 0.0_realkind, sign(1.0_realkind, zqsdifc-zqca) )
+
+     !     zhvfor=1.0 - zsifor*(1.0 - zdeltafor)*zrsfor/(zrsfor+zrb)
+
+     zhvfor=1.0_realkind - zsifor*(1.0_realkind - zdeltafor)+ zsifor*(1.0_realkind - zdko*zdeltafor)*zrb*(zrsrbsum)
+
+     !     correct value of zrsoilsc in case of dew/evaporation
+
+
+     zrsoilsc=0._realkind
+     if(zqca<zqsdifsc)then
+        zrsoilsc=50._realkind/zf2
+     endif
+
+     !         calculate new values of ztca and zqca
+     zsl2=ztam/zra + (ztsc*(1._realkind-zfrsnfor)+ztsnc*zfrsnfor)/zrd+ ztc*zrbinv
+     zsl3=1._realkind/zra+1._realkind/zrd+zrbinv
+     ztca=zsl2/zsl3
+
+     zca1=latvap/zra
+     zca2=zlatc*zhvfor/zrb
+     zca3=zlatsc/(zrsoilsc+zrd)*(1._realkind-zfrsnfor)
+     zca4=zlatsnc/zrd*zfrsnfor
+     zqca=(zqam*zca1+zqsdifc*zca2+zqsdifsc*zca3+zqsdifsnc*zca4)/ (zca1+zca2+zca3+zca4)
+
+     !     maximize zqca to the saturation value corresponing to ztca
+
+     !     ps         zqsdifca=zepcr*esati(ztca)/
+     !     ps     &        (ps(jl)-(1.-epsilo)*zcrit*esati(ztca))
+     !     ps050623         zqca=min(zqca,zqsdifca)
+
+
+     !     l    re-calculate effective ground temperature for land
+
+     ztseff = zfrop*ztsns+zcw*ztca+zsnw*ztsn
+
+
+     tca(jl)=ztca
+     t2mfor(jl)=(ztforfl+(ztca-ztforfl)/zhfor*0.13_realkind*zhfor)*zlandon + ztdumout*zlandoff
+
+     q2mfor(jl)=zqca*zlandon + zqdumout*zlandoff
+
+     tseff(jl)=ztseff
+
+
+     if(q2mfor(jl)>0._realkind) then
+        rh2mfor(jl)=q2e(ps(jl),q2mfor(jl))/t2es(tca(jl))
+     else
+        rh2mfor(jl)=0._realkind
+     endif
+     rh2mfor(jl)=max(min(rh2mfor(jl),1._realkind),0._realkind)
+     rh2mfor(jl)=rh2mfor(jl)*zlandon + zrhdumout*zlandoff
+
+     if(lprint.and..not.lpote)write(945,'(2i6,2f8.3,30(1pe12.4))')    &
+            jl,kstep,zalat,along(jl), &
+            zf1,zf3,zf4,zrsrb1,zrsrb2,zrsrb3, &
+			sw1for(jl), sw2for(jl), sw3for(jl), &
+			sw1opl(jl), sw2opl(jl), sw3opl(jl), &
+			dz1w, vfl_mix1(jl), vfl_mix2(jl), vfl(isoil), &
+			zf21for,zf22for,zf23for,zf21opl,zf22opl,zf23opl
+
+
+     !     open land
+
+     !     ps020214
+     !     assuming neutral conditions!!
+     zustar=zvel*carman/log(zhnlev/zroughopl)
+
+     zrey=zustar*zroughopl/zcvis
+     zfact=exp(max(-89._realkind,carman*zzilitin*sqrt(zrey)))
+     zrousopl=zroughopl/zfact
+     !cps111107 zrousopl=zroughopl
+     zrousopl=max(0.001_realkind,zrousopl)
+
+     !     do a separate  estimation of zra for open land, zraopl
+     !     only used for sensible heat flux and latent heat flux
+
+     zslask=(zrousopl+zhnlev)/zrousopl
+     zslaskmom=(zroughopl+zhnlev)/(zroughopl)
+     !     ps020523         z01=1./(log(zslask))**2
+     z01=1._realkind/(log(zslask)*log(zslaskmom))
+     z01mom=1._realkind/(log(zslaskmom)*log(zslaskmom))
+     z02=sqrt(zslask)*z01
+     zcneut=z01*(carman**2)
+     zcneutmom=z01mom*(carman*carman)
+
+     zri=zriq + z03 *( 1._realkind+zcrdq*zqam)*tsns(jl)
+
+
+     if( zri>0.0_realkind ) then
+        zstaon=1.0_realkind
+        zstaoff=0.0_realkind
+     else
+        zstaon=0.0_realkind
+        zstaoff=1.0_realkind
+     endif
+
+     zria=abs(zri)
+
+     !     stable richardson number > 0.
+     !     (formulae according to louis et al,1982)
+     zdr=2.0_realkind*zqb*zria/sqrt(1._realkind +zqd*zria)
+     zcdrag=zcneutmom/( 1._realkind +zdr )
+     zdr=2.0_realkind*zqb*zria*sqrt(1._realkind +zqdh*zria)
+     zcdrgh=zcneut/( 1._realkind +zdr )
+
+     !     unstable richardson number
+     !     (louis et al,1982: ecmwf)
+     zfmx=zqb*zria/(1._realkind+z02*zcams3*sqrt(zria))
+     zslask=zcneut*(1._realkind+3._realkind*zfmx)
+     zcdrag=zstaoff*zcneutmom*(1._realkind+2._realkind*zfmx) +zstaon*zcdrag
+     zcdrgh=zstaoff*zslask +zstaon*zcdrgh
+
+     zustar=sqrt(zcdrag*zdup2)
+     !     autido060523         zustar=max(zustar,0.01)
+     zustar=max(zustar,0.03_realkind)
+     zustaropl=zustar
+     !     l	aerodynamic resistances
+
+     !     aerodynamic resistance for heat='zraopl'
+     !     ( computation not used if zlandoff=1.)
+
+     ! estimation of  zraopl 
+
+     zra=zlandon/(zcdrgh*zvel) +zlandoff
+     !     ps080512         if(zfrop<zfrlim)zra=100.
+
+     !     store zra for forest in zracn
+
+     zraopl=zra
+     !     ps080512         if(zfrop<zfrlim)zraopl=100.
+
+
+     !     calculation of delta and in noilon/planton page 544
+
+     zvegmaxopl=0.2_realkind*zvegopl*zlaiopn_int
+     !     ps090526
+     zvegmaxopl=zvegmaxopl*zconvred
+     !     ps090526
+
+     if( svegopl(jl)<1.e-15_realkind) svegopl(jl)=0._realkind
+     zvegmmopl=svegopl(jl)*rhoh2o
+     !     no interception if tsns<=0 degc
+     !     ps020121         if(ztsns<=tmelt)zvegmmopl=0.
+     !     sveg can get larger than max in timestepping: 
+     zvegmmopl=min(zvegmmopl,zvegmaxopl)
+     if(zvegmaxopl>0.0_realkind)then
+        zdeltaopl=(zvegmmopl/zvegmaxopl)**z23
+     else
+        !     settings for the case when isoil=8 (glacier ice)
+        !     negative zvegmaxopl later implies zdeltaopl=0 
+        zdeltaopl=0._realkind
+        zvegmaxopl=-100._realkind
+     endif
+     zdeltaoplold=zdeltaopl
+
+
+     !     calculate surface resistance
+
+     !     b photosynt active radiation
+
+     zf=0.55_realkind*2._realkind*zrads/(rsaopl*zlaiopn_int)
+     zf1=(1._realkind + zf) / (zf + zrsminopl/5000._realkind)
+     zf1=max (1.e-6_realkind,zf1)
+
+     !     b vapour pressure deficit
+
+     !     ps051206         zf3= 1. - alfafor*(zqsdifns-zqam)*1000.
+     zf3= 1._realkind - alfaopl*(zqsdifns-zqam)*1000._realkind
+     zf3=max (1.e-6_realkind,zf3)
+
+     !     b air temp
+
+     zf4=1._realkind- 0.0016_realkind*((298.16_realkind-ztsns)**2.0_realkind)
+     zf4=max (1.e-6_realkind,zf4)
+
+!     zrsopl=zrsminopl*zf1*zf6/(zlaiopn_int*zf2*zf3*zf4)
+
+!     zrsopl=min(zrsopl,5000._realkind)
+
+     zqq=zlarsmopl*zf3*zf4/(zf1*zf6)
+     zrq1=1._realkind/(1._realkind + zra*zqq*zf21opl)
+     zrq2=1._realkind/(1._realkind + zra*zqq*zf22opl)
+     zrq3=1._realkind/(1._realkind + zra*zqq*zf23opl)
+
+     zrsra1=zqq*zf21opl*zrq1*frroot1wopl(jl)
+     zrsra2=zqq*zf22opl*zrq2*frroot2wopl(jl)
+     zrsra3=zqq*zf23opl*zrq3*(1._realkind-frroot1wopl(jl)-frroot2wopl(jl))
+     ! zrsra3=zqq*zf22opl*zrq2*(1.-frroot1wopl(jl)-frroot2wopl(jl))
+
+     zrsrasum=zrsra1+zrsra2+zrsra3
+
+     if(lprint.and..not.lpote)write(946,'(2i6,2f8.3,10(1pe12.4))')    &
+            jl,kstep,zalat,along(jl), &
+            zf1,zf3,zf4,zrsra1,zrsra2,zrsra3
+     if(lprint2.and..not.lpote)write(246,'(2i6,2f8.3,10(1pe12.4))')    &
+            jl,kstep,zalat,along(jl), &
+            zf1,zf3,zf4,zrsra1,zrsra2,zrsra3
+     if(lprint3.and..not.lpote)write(346,'(2i6,2f8.3,10(1pe12.4))')    &
+            jl,kstep,zalat,along(jl), &
+            zf1,zf3,zf4,zrsra1,zrsra2,zrsra3
+
+     !     evapo(transpi)ration 
+
+     !     here etr evhv and eg are calcultaed for the current area, i.e. not 
+     !     multiplied by veg or (1-veg).
+
+     !     obs that these fluxes etr er ev are positive upwards!!!
+
+     !     evaporation from bare ground:
+
+     eg(jl)=zdens*zlatns*(zqsdifns-zqam)/(zrsoilns+zra)
+
+
+     !     for (zqsdif-zqam)<0: etr=0 and er=condensation to
+     !     whole canopy (regardless of zdelta)
+     !     for (zqsdif-zqam)>0: etr and er as expected
+     !     (see noilhan/planton 1989 p 544: text at top of page)
+
+     zsiopl=max( 0.0_realkind, sign(1.0_realkind, zqsdifns-zqam) )
+
+     !     halsted coefficient np89,p 543:
+
+     !     zhvopl=1.0 - zsiopl*(1.0 - zdeltaopl)*zrsopl/(zrsopl+zra)
+
+     zhvopl=1.0_realkind - zsiopl*(1.0_realkind - zdeltaopl)+ zsiopl*(1.0_realkind - zdko*zdeltaopl)*zra*(zrsrasum)
+
+     !     total evapotr from canopy: transp (etr) + interc (er):
+
+     zevfor=zdens*zlatc*zhvfor*(zqsdifc-zqca)/zrb
+     zevopl=zdens*zlatns*zhvopl*(zqsdifns-zqam)/zra
+
+     !     zev divided by zhv - for interception model in surf
+     evhvfor(jl)=zdens*zlatc*(zqsdifc-zqca)/zrb
+     evhvopl(jl)=zdens*zlatns*(zqsdifns-zqam)/zra
+
+     !     transpiration from canopy:
+
+     etrfor(jl)=zdens*zlatc*zsifor*(1._realkind-zdko*zdeltafor)* (zqsdifc-zqca)*(zrsrbsum)
+     etropl(jl)=zdens*zlatns*zsiopl*(1._realkind-zdko*zdeltaopl)*(zqsdifns-zqam)*(zrsrasum)
+
+     if(lprint.and..not.lpote)write(955,'(2i6,2f8.3,15(1pe12.4))')    &
+            jl,kstep,zalat,along(jl), &
+            zsifor,zdeltafor,zqsdifc ,zqca,zrsrbsum, &
+            zsiopl,zdeltaopl,zqsdifns,zqam,zrsrasum
+
+     if(use_guess)then
+        cond_for(jl)=1._realkind/zrsrbsum/max(zsifor,1.e-3_realkind)/(1._realkind-zdko*zdeltafor)-zrb
+        cond_for(jl)=1._realkind/cond_for(jl)
+        cond_opl(jl)=1._realkind/zrsrasum/max(zsiopl,1.e-3_realkind)/(1._realkind-zdko*zdeltaopl)-zra
+        cond_opl(jl)=1._realkind/cond_opl(jl)
+     endif
+
+     !     evaporation from surface below trees:
+
+     zesc=zdens*zlatsc*(zqsdifsc-zqca)/(zrsoilsc+zrd)
+
+     !     evaporation from snow surface below trees:
+
+     !     gj130504 assuming zroughsn=0.0002 & zroughopl=0.5
+     !     gj130504 and u,v=1ms gives a zcneut relationship of
+     !     gj130504 1:0.2 (opl:snow) use this to increase resistance
+     !     gj130504 term for evaporation of snow under trees
+     !     ps050802         zrdsn=5.*zrd
+     !     ps050802         latfsnc(jl)=-zdens*zlatsnc*(zqsdifsnc-zqca)/zrdsn
+     !     gj
+     latfsnc(jl)=-zdens*zlatsnc*(zqsdifsnc-zqca)/zrd
+
+#ifdef SNOWINT
+
+
+     !     df   evaporation from snow on canopy:
+
+
+     latsnowcan(jl)=-zdens*zlatc*zevapeff*(zqsdifc-zqca)/zrb
+
+
+     zlattemp=latsnowcan(jl)
+
+     !     test if snow on canopy will be less than zero in this time step
+
+     zcc=1000._realkind/(1000._realkind+10._realkind)
+     zcp=zcc/(1._realkind-(zcc*zhvegvel*25._realkind/0.8_realkind/1000._realkind))
+     zcp=min(1._realkind,zcp)
+     zcp=max(0._realkind,zcp)
+     zk=zcp/zsnowcanmax
+
+     zinteff=(zsnowcanmax-snowcan(jl))*(1._realkind-exp(max(-89._realkind,-zk*dsolddt(jl)*dtime/rhoh2o)))
+     zinteff=max(zinteff,0._realkind)
+
+     zsnowcan=snowcan(jl)+zinteff
+     if(tc(jl)<tmelt)zsnowcan=zsnowcan+svegfor(jl)
+     zsnowcan=zsnowcan*exp(-4.498e-6_realkind*dtime)+latsnowcan(jl)/zlatc*dtime/rhoh2o
+
+     !     evaporation is set so that snowcan will not become less than zero
+     !     in this time step.
+
+
+     if(zsnowcan<=0.)then
+        latsnowcan(jl)=latsnowcan(jl)+zsnowcan*zlatc/dtime*rhoh2o
+     endif
+
+
+#else
+     latsnowcan(jl)=0._realkind
+#endif
+
+
+     !     do a separate  estimation of zra for snow over open land, zrasn
+     !     only used for sensible heat flux and latent heat flux
+
+     !     assuming neutral conditions!!
+     zustar=zvel*carman/log(zhnlev/zroughsn)
+
+     zrey=zustar*zroughsn/zcvis
+     zfact=exp(max(-89._realkind,carman*zzilitin*sqrt(zrey)))
+     zroussn=zroughsn/zfact
+
+     zslask=(zroussn+zhnlev)/zroussn
+     zslaskmom=(zroughsn+zhnlev)/(zroughsn)
+     z01=1._realkind/(log(zslask)*log(zslaskmom))
+     z01mom=1._realkind/(log(zslaskmom)*log(zslaskmom))
+     z02=sqrt(zslask)*z01
+     zcneut=z01*(carman**2)
+     zcneutmom=z01mom*(carman*carman)
+
+     zri=zriq + z03 *( 1._realkind+zcrdq*zqam)*tsnow(jl)
+
+
+     if( zri>0.0_realkind ) then
+        zstaon=1.0_realkind
+        zstaoff=0.0_realkind
+     else
+        zstaon=0.0_realkind
+        zstaoff=1.0_realkind
+     endif
+
+     zria=abs(zri)
+
+     !     stable richardson number > 0.
+     !     (formulae according to louis et al,1982)
+     zdr=2.0_realkind*zqb*zria/sqrt(1._realkind +zqd*zria)
+     zcdrag=zcneutmom/( 1._realkind +zdr )
+     zdr=2.0_realkind*zqb*zria*sqrt(1._realkind +zqdh*zria)
+     zcdrgh=zcneut/( 1._realkind +zdr )
+
+     !     unstable richardson number
+     !     (louis et al,1982: ecmwf)
+     zfmx=zqb*zria/(1._realkind+z02*zcams3*sqrt(zria))
+     zslask=zcneut*(1._realkind+3._realkind*zfmx)
+     zcdrag=zstaoff*zcneutmom*(1._realkind+2._realkind*zfmx) +zstaon*zcdrag
+     zcdrgh=zstaoff*zslask +zstaon*zcdrgh
+     zustar=sqrt(zcdrag*zdup2)
+     !     autido060523         zustar=max(zustar,0.01)
+     zustar=max(zustar,0.03_realkind)
+     zustarsn=zustar
+     !     
+     !     l	aerodynamic resistances
+
+     !     aerodynamic resistance for heat='zrasn'
+     !     ( computation not used if zlandoff=1.)
+
+     !     estimation of 
+     zrasn=zlandon/(zcdrgh*zvel) +zlandoff
+     !     ps080512         if(zsnw<zfrlim)zrasn=100.
+
+
+     !     evaporation from snow on open land
+
+     esn(jl)=zdens*zlatsn*(zqsdifsn-zqam)/zrasn
+     !     sensible heat flux 
+     zhns=-zdens/zraopl*cpair*(ztsns-ztam)
+     zhsn=-zdens/zrasn*cpair*(ztsn-ztam)
+     zhc=-zdens/zrb*cpair*(ztc-ztca)
+     zhsc=-zdens/zrd*cpair*(ztsc-ztca)
+     zhsnc=-zdens/zrd*cpair*(ztsnc-ztca)
+     zhcw=-zdens/zracw*cpair*(ztca-ztam)
+     zh=zhns*zfrop + zhsn*zsnw + zhcw*zcw
+
+     !     compute a new preliminary estimate of sveg at tau+1, zvegp
+
+     !     hirlam definition:
+     zrainh=drolddt(jl)
+
+     !     forest part
+
+     !     use only if tc>tmelt
+
+     !     ps011218       if(ztc>tmelt)then
+
+     zvegp=0._realkind
+
+     zevhv=evhvfor(jl)
+     zhvold=zhvfor
+     if (zvegmaxfor>zveglim)then
+        !     1:st case: evhv>0: evaporation, er has factor delta
+        !     2:nd case: evhv<=0: condensation, er has no factor delta
+        !     zer=evhv(jl)
+        if (zevhv>0.0_realkind)then
+           zaa=zvegmmfor**z23
+           zcc=0.5_realkind*dtime*zvegfor*zevhv/(zlatc*zvegmaxfor**z23)
+
+           zdd=-zvegmmfor-dtime*zvegfor*zrainh+zcc*zaa
+
+           !     test whether end wr gt max:
+           !     zthr throughfall for  whole geogr area
+           !     e0=2*zcc*zaa
+
+           zf0=zdd
+           zfx=zvegmaxfor + zcc*zvegmaxfor**z23 + zdd
+
+           !     zf is the function to be solved.
+           !     for the new value of wr=zvegp0: zf=0
+           !     zf0 is the value of zf at at zero canopy water 
+           !     zfx is the value of zf at at max canopy water 
+           !     always: zf0 le zfx
+
+           if (zf0<0._realkind.and.zfx>0._realkind)then
+
+              zvegp0=-zdd-zcc*zaa 
+
+              if(zvegp0<1.e-6_realkind)zvegp0=0._realkind
+
+           elseif (zf0<0._realkind.and.zfx<=0._realkind)then
+
+              !     rainy case - potential evap from canopy water >= max:
+              zvegp0=-zdd-zcc*zvegmaxfor**z23
+
+           else
+
+              !     dry case:
+              zvegp0=0._realkind
+
+           endif
+        else
+           !     evhv also on non water part (condensation)
+           zvegp0=zvegmmfor+dtime*zvegfor*(zrainh-zevhv/zlatc)
+        endif
+        zthr=max(0.0_realkind, (zvegp0-zvegmaxfor)/dtime ) 
+        zvegp=zvegp0-dtime*zthr
+     else
+        zthr=0.0_realkind
+        zvegp=0.0_realkind
+     endif
+     if( zvegp<1.e-15_realkind) zvegp=0._realkind
+     zvegpfor=zvegp
+     zdeltafor=(zvegp/zvegmaxfor)**z23
+
+     zsifor=max( 0.0_realkind, sign(1.0_realkind, zqsdifc-zqca) )
+
+     !     halsted coefficient np89,p 543:
+     !     zhv=1.0 - zsi*(1.0 - zdelta)*zrsfor/(zrsfor+zrb)
+
+     zhv=1.0_realkind - zsifor*(1.0_realkind - zdeltafor)+zsifor*(1.0_realkind - zdko*zdeltafor)*zrb*(zrsrbsum)
+
+     !     total evapotr from canopy: transp (etr) + interc (er):
+
+     zhvfor=0.5_realkind*(zhvold+zhv)
+
+     zhvoldfor=zhvold
+
+     !     end of interception calculations
+     zevfor=zdens*zlatc*zhvfor*(zqsdifc-zqca)/zrb
+
+
+     !     transpiration from canopy:
+
+     zetr=zdens*zlatc*zsifor*(1._realkind-zdko*zdeltafor)*(zqsdifc-zqca)*(zrsrbsum)
+
+     etrfor(jl)=0.5_realkind*(etrfor(jl)+zetr)
+
+     !     open land part
+
+     !     use only if tsns>tmelt
+
+     !     ps011218       if(ztsns>tmelt)then
+
+     zvegp=0._realkind
+     zevhv=evhvopl(jl)
+     zhvold=zhvopl
+
+     if (zvegmaxopl>zveglim)then
+        !     1:st case: evhv>0: evaporation, er has factor delta
+        !     2:nd case: evhv<=0: condensation, er has no factor delta
+        !     zer=evhv(jl)
+        if (zevhv>0.0_realkind)then
+           zaa=zvegmmopl**z23
+           zcc=0.5_realkind*dtime*zvegopl*zevhv/(zlatns*zvegmaxopl**z23)
+
+           zdd=-zvegmmopl-dtime*zvegopl*zrainh+zcc*zaa
+
+           !     test whether end wr gt max:
+           !     zthr throughfall for  whole geogr area
+           !     e0=2*zcc*zaa
+
+           zf0=zdd
+           zfx=zvegmaxopl + zcc*zvegmaxopl**z23 + zdd
+
+           !     zf is the function to be solved.
+           !     for the new value of wr=zvegp0: zf=0
+           !     zf0 is the value of zf at at zero canopy water 
+           !     zfx is the value of zf at at max canopy water 
+           !     always: zf0 le zfx
+
+           if (zf0<0._realkind.and.zfx>0._realkind)then
+              zvegp0=-zdd-zcc*zaa 
+              if(zvegp0<1.e-6_realkind)zvegp0=0._realkind
+           elseif (zf0<0._realkind.and.zfx<=0._realkind)then
+
+              !     rainy case - potential evap from canopy water >= max:
+              zvegp0=-zdd-zcc*zvegmaxopl**z23
+           else
+              !     dry case:
+              zvegp0=0._realkind
+           endif
+        else
+           !     evhv also on non water part (condensation)
+           zvegp0=zvegmmopl+dtime*zvegopl*(zrainh-zevhv/zlatns)
+        endif
+        zthr=max(0.0_realkind, (zvegp0-zvegmaxopl)/dtime ) 
+        zvegp=zvegp0-dtime*zthr
+     else
+        zthr=0.0_realkind
+        zvegp=0.0_realkind
+     endif
+
+     if( zvegp<1.e-15_realkind) zvegp=0._realkind
+     zdeltaopl=(zvegp/zvegmaxopl)**z23
+     zdeltaopl=max(zdeltaopl,0._realkind)
+
+     zsiopl=max( 0.0_realkind, sign(1.0_realkind, zqsdifns-zqam) )
+
+     !     halsted coefficient np89,p 543:
+     !     zhv=1.0 - zsi*(1.0 - zdelta)*zrsopl/(zrsopl+zra)
+
+     zhv=1.0_realkind - zsiopl*(1.0_realkind - zdeltaopl)+ zsiopl*(1.0_realkind - zdko*zdeltaopl)*zra*(zrsrasum)
+
+     !     total evapotr from canopy: transp (etr) + interc (er):
+
+     zhvopl=0.5_realkind*(zhvold+zhv)
+
+     !     end of interception calculations
+
+     !     ps011218       endif
+
+     zevopl=zdens*zlatns*zhvopl*(zqsdifns-zqam)/zraopl
+
+
+     !     transpiration from canopy:
+
+
+     zetr=zdens*zlatns*zsiopl*(1._realkind-zdko*zdeltaopl)*(zqsdifns-zqam)*(zrsrasum)
+
+     etropl(jl)=0.5_realkind*(etropl(jl)+zetr)
+
+     !     evapotransipration canopy air - hnlev
+
+     !     ps090127         zecw= zdens*latvap*(zqca-zqam)/zracw
+     zecw= zesc*(1._realkind-zfrsnfor)-latfsnc(jl)*zfrsnfor+zevfor- latsnowcan(jl)
+
+     !     ps         ze= -eg(jl)*((1.-zvegfor)*zcw+(1.-zvegopl)*zfrop) -
+     !     ps     &        zcw*zvegfor*zecw - zfrop*zvegopl*zevopl -
+     !     ps     &        esn(jl)*zsnw
+
+     !     ps020121
+
+     ze= -eg(jl)*(1._realkind-zvegopl)*zfrop - zcw*zecw-zfrop*zvegopl*zevopl-esn(jl)*zsnw
+
+
+     if(zrsrbsum>1.e-10_realkind)then
+        etrfor1(jl)=etrfor(jl)*zrsrb1/zrsrbsum
+        etrfor2(jl)=etrfor(jl)*zrsrb2/zrsrbsum
+        etrfor3(jl)=etrfor(jl)*zrsrb3/zrsrbsum
+     else
+        etrfor1(jl)=0._realkind
+        etrfor2(jl)=0._realkind
+        etrfor3(jl)=0._realkind
+     endif
+
+     if(zrsrasum>1.e-10_realkind)then
+        etropl1(jl)=etropl(jl)*zrsra1/zrsrasum
+        etropl2(jl)=etropl(jl)*zrsra2/zrsrasum
+        etropl3(jl)=etropl(jl)*zrsra3/zrsrasum
+     else
+        etropl1(jl)=0._realkind
+        etropl2(jl)=0._realkind
+        etropl3(jl)=0._realkind
+     endif
+
+     !     esitmation of effective zrah for open land an snow areas
+
+     zrah=0._realkind
+
+
+     !     wind components must not be zero.
+     if( u(jl,nlev)<0.0_realkind ) then
+        zuneg=1.0_realkind
+        zupos=0.0_realkind
+     else
+        zuneg=0.0_realkind
+        zupos=1.0_realkind
+     endif
+
+     zunlev=zuneg*min(u(jl,nlev),-zueps)+ zupos*max(u(jl,nlev),zueps)
+
+     if( v(jl,nlev)<0.0_realkind ) then
+        zvneg=1.0_realkind
+        zvpos=0.0_realkind
+     else
+        zvneg=0.0_realkind
+        zvpos=1.0_realkind
+     endif
+
+     zvnlev=zvneg*min(v(jl,nlev),-zueps)+ zvpos*max(v(jl,nlev),zueps)
+
+     !     t2m and q2m for bare soil respectively
+     !     t2mbs, q2mbs
+     zqs=zqam+eg(jl)*zraopl/zdens/zlatns
+     zqs=max(zqs,0._realkind)
+
+     ztotf=zhns -zsl11*t(jl,nlev)*eg(jl)/zlatns
+     zmoin=zsl1*ztotf/( 2._realkind*(ps(jl)-dph(jl,nlev+1))*zustaropl**3 )
+
+     zl2=z2m*zmoin
+     zl2=max( zl2, zl2lim )
+     !cps111107 zln2=log(z2m/zroughopl)
+     zln2=log(z2m/zrousopl)
+     zln2k=zln2*zrkar
+
+     !     thetastar and qstar
+
+     zthst=zhns/(cpair*zdens*zustaropl)
+     zqstar=-eg(jl)/(zlatns*zdens*zustaropl)
+
+     !     stable case zunson=0, unstable zunson=1
+
+     if( ztotf<0.0_realkind ) then
+        zunson=1.0_realkind
+        zunsoff=0.0_realkind
+     else
+        zunson=0.0_realkind
+        zunsoff=1.0_realkind
+     endif
+
+     !     zt2m etc dummy if zunson=1.
+
+     zslask=max(-89._realkind,zlandon*( zunson + zunsoff* (-zhm*zthst*zl2/ztam) ) +zlandoff)
+
+     if(zslask>10._realkind) then
+        write(6,*) ' slfluxo_land: zt2mbs ', jl,along(jl),coslat(jl),zslask
+     endif
+     zt2m=tsns(jl) +zthst*zln2k + (ztam-tsns(jl))*(1._realkind- exp(zslask) )
+     zslask=zlandon*( zunson + zunsoff*(-zq*zqstar*zl2/zqam) ) +zlandoff
+     zq2m=zqs +zqstar*zln2k + (zqam-zqs)*(1._realkind- exp(zslask) )
+
+     !     zy2 dummy if zunson=0
+
+     zy=sqrt( 1.0_realkind -9.0_realkind*zl2*zunson )
+     !cps111107 zy=min( zy, sqrt( 8.0_realkind/zroughopl ) -1.0_realkind )
+     zy=min( zy, sqrt( 8.0_realkind/zrousopl ) -1.0_realkind )
+     zy2=zunson*zy +zunsoff
+     zy2=zy2*zlandon +zlandoff
+
+     zpar= ( zln2-2._realkind*log( 0.5_realkind*(1._realkind+zy2)) )*zrkar
+     zt2mbs=( zunson*(tsns(jl) +zthst*zpar) + zunsoff*zt2m )*zlandon + ztdumout*zlandoff
+     zq2mbs=( zunson*(zqs +zqstar*zpar) + zunsoff*zq2m )*zlandon + zqdumout*zlandoff
+
+     if(lt2mmod)then
+        !     modification of t2m and q2m with respect to tke
+
+        zbouy=gravit*zhnlev*(t(jl,nlev)-tsns(jl))/t(jl,nlev)
+
+        !     only relevant in stable situations
+
+        if(zbouy>0._realkind.and.(1._realkind-zvegopl)*zfrop &
+             >0._realkind) then
+
+           !     : tke > bouyancy ?
+
+           zslask=2._realkind*tke(jl,nlev)/zbouy
+
+           zweight=min(zslask,1._realkind)
+
+           zt2mbs=(1._realkind-zweight)*zt2mbs+zweight*t(jl,nlev)
+           zq2mbs=(1._realkind-zweight)*zq2mbs+zweight*zqam
+
+           weightbs(jl)=zweight
+        endif
+        !     end modification of t2m and q2m with respect to tke
+     endif                  !if(lt2mmod)then
+
+     !     l    calculate wind at 10 m height above bare soil
+
+     !     compute ustar and vstar
+
+     zust=zustaropl*zunlev/zvel
+     zvst=zustaropl*zvnlev/zvel
+
+     zl10=z10m*zmoin
+     zln10=log(z10m/zroughopl)
+     zln10k=zln10*zrkar
+
+     !     zu10 etc dummy if zunson=1.0
+
+     zslask=max(-89._realkind,zunson + zunsoff*(-zm*zust*zl10/zunlev))
+     zu10=zust*zln10k + zunlev*(1._realkind-exp(zslask))
+     zslask=max(-89._realkind,zunson + zunsoff*(-zm*zvst*zl10/zvnlev))
+     zv10=zvst*zln10k + zvnlev*(1._realkind-exp(zslask))
+
+     !     zx10 dummy if zunson=0
+
+     zx10=zunson*(1._realkind-15._realkind*zl10) + zunsoff
+     zx10=sqrt(sqrt(zx10))
+
+     zpar=(zln10 - (log( 0.5_realkind*(1._realkind+zx10*zx10) )+&
+          2._realkind*( log( 0.5_realkind*(1._realkind+zx10))-&
+          atan(zx10)+zrpi4 )) )*zrkar
+
+     zu10mbs=( zunson*zust*zpar + zunsoff*zu10 )*zlandon+  zudumout*zlandoff
+     zv10mbs=( zunson*zvst*zpar + zunsoff*zv10 )*zlandon+  zudumout*zlandoff
+
+     !     t2m and q2m for open land veg-part respectively
+     !     t2mopv, q2mopv
+     zqs=zqam+zevopl*zraopl/zdens/zlatns
+     zqs=max(zqs,0._realkind)
+
+     ztotf=zhns -zsl11*t(jl,nlev)*zevopl/zlatns
+     zmoin=zsl1*ztotf/( 2._realkind*(ps(jl)-dph(jl,nlev+1))*zustaropl**3 )
+
+     zl2=z2m*zmoin
+     zl2=max( zl2, zl2lim )
+     !cps111107 zln2=log(z2m/zroughopl)
+     zln2=log(z2m/zrousopl)
+     zln2k=zln2*zrkar
+
+     !     thetastar and qstar
+
+     zthst=zhns/(cpair*zdens*zustaropl)
+     zqstar=-zevopl/(zlatns*zdens*zustaropl)
+
+     !     stable case zunson=0, unstable zunson=1
+
+     if( ztotf<0.0_realkind ) then
+        zunson=1.0_realkind
+        zunsoff=0.0_realkind
+     else
+        zunson=0.0_realkind
+        zunsoff=1.0_realkind
+     endif
+
+     !     zt2m etc dummy if zunson=1.
+
+     zslask=max(-89._realkind,zlandon*( zunson + zunsoff*(-zhm*zthst*zl2/ztam) ) +zlandoff)
+
+     if(zslask>10._realkind) then
+        write(6,*) ' slfluxo_land: zt2mopv ',jl,along(jl),coslat(jl),zslask
+     endif
+     zt2m=tsns(jl) +zthst*zln2k + (ztam-tsns(jl))*(1._realkind- exp(zslask) )
+     zslask=max(-89._realkind,zlandon*( zunson + zunsoff*(-zq*zqstar*zl2/zqam) ) +zlandoff)
+     zq2m=zqs +zqstar*zln2k +(zqam-zqs)*(1._realkind- exp(zslask) )
+
+     !     zy2 dummy if zunson=0
+
+     zy=sqrt( 1.0_realkind -9.0_realkind*zl2*zunson )
+     !cps111107 zy=min( zy, sqrt( 8.0_realkind/zroughopl ) -1.0_realkind )
+     zy=min( zy, sqrt( 8.0_realkind/zrousopl ) -1.0_realkind )
+     zy2=zunson*zy +zunsoff
+     zy2=zy2*zlandon +zlandoff
+
+     zpar= ( zln2-2._realkind*log( 0.5_realkind*(1._realkind+zy2)) )*zrkar
+     zt2mopv=( zunson*(tsns(jl) +zthst*zpar) + zunsoff*zt2m )*zlandon + ztdumout*zlandoff
+     zq2mopv=( zunson*(zqs +zqstar*zpar) +  zunsoff*zq2m )*zlandon + zqdumout*zlandoff
+
+     if(lt2mmod)then
+        !     modification of t2m and q2m with respect to tke
+
+        zbouy=gravit*zhnlev*(t(jl,nlev)-tsns(jl))/t(jl,nlev)
+
+        !     only relevant in stable situations
+
+        if(zbouy>0._realkind.and.zvegopl*zfrop>0._realkind) then
+
+           !     : tke > bouyancy ?
+
+           zslask=2._realkind*tke(jl,nlev)/zbouy
+
+           zweight=min(zslask,1._realkind)
+
+           zt2mopv=(1._realkind-zweight)*zt2mopv+zweight*t(jl,nlev)
+           zq2mopv=(1._realkind-zweight)*zq2mopv+zweight*zqam
+
+           weightopv(jl)=zweight
+        endif
+        !     end modification of t2m and q2m with respect to tke
+     endif                  !if(lt2mmod)then
+
+
+     !         calculate wind at 10 m height above open land veg part
+
+
+     !     compute ustar and vstar
+
+     !     calculated above         zust=zustaropl*zunlev/zvel
+     !     calculated above         zvst=zustaropl*zvnlev/zvel
+
+     zl10=z10m*zmoin
+     !     calculated above         zln10=log(z10m/zroughopl)
+     !     calculated above         zln10k=zln10*zrkar
+
+     !     zu10 etc dummy if zunson=1.0
+
+     zslask=max(-89._realkind,zunson + zunsoff*(-zm*zust*zl10/zunlev))
+     zu10=zust*zln10k + zunlev*(1._realkind-exp(zslask))
+     zslask=max(-89._realkind,zunson + zunsoff*(-zm*zvst*zl10/zvnlev))
+     zv10=zvst*zln10k + zvnlev*(1._realkind-exp(zslask))
+
+     !     zx10 dummy if zunson=0
+
+     zx10=zunson*(1._realkind-15._realkind*zl10) + zunsoff
+     zx10=sqrt(sqrt(zx10))
+
+     zpar=(zln10 - (log( 0.5_realkind*(1._realkind+zx10*zx10) )+ 2._realkind* &
+          ( log( 0.5_realkind*(1._realkind+zx10))-atan(zx10)+zrpi4 )) )*zrkar
+
+     zu10mopv=( zunson*zust*zpar + zunsoff*zu10 )*zlandon+ &
+          zudumout*zlandoff
+     zv10mopv=( zunson*zvst*zpar + zunsoff*zv10 )*zlandon+  &
+          zudumout*zlandoff
+
+
+
+     !     t2m and q2m for open land snow respectively
+     !     t2msn, q2msn
+     ztotf=zhsn -zsl11*t(jl,nlev)*esn(jl)/zlatsn
+     zmoin=zsl1*ztotf/( 2._realkind*(ps(jl)-dph(jl,nlev+1))*zustarsn**3 )
+
+     zl2=z2m*zmoin
+     zl2=max( zl2, zl2lim )
+     !cps111107 zln2=log(z2m/zroughsn)
+     zln2=log(z2m/zroussn)
+     zln2k=zln2*zrkar
+
+     !     thetastar and qstar
+
+     zthst=zhsn/(cpair*zdens*zustarsn)
+     zqstar=-esn(jl)/(zlatsn*zdens*zustarsn)
+
+     !     stable case zunson=0, unstable zunson=1
+
+     if( ztotf<0.0_realkind ) then
+        zunson=1.0_realkind
+        zunsoff=0.0_realkind
+     else
+        zunson=0.0_realkind
+        zunsoff=1.0_realkind
+     endif
+
+     !     zt2m etc dummy if zunson=1.
+
+     zslask=max(-89._realkind,zlandon*( zunson + zunsoff*(-zhm*zthst*zl2/ztam) ) +zlandoff)
+
+     if(zslask>10._realkind) then
+        write(6,*) ' slfluxo_land: zt2msn ',jl,along(jl),zalat,zslask
+     endif
+     zt2m=tsnow(jl) +zthst*zln2k +(ztam-tsnow(jl))*(1._realkind- exp(zslask) )
+     zslask=max(-89._realkind,zlandon*( zunson + zunsoff*(-zq*zqstar*zl2/zqam) ) +zlandoff)
+     if(zslask>10._realkind) then
+        write(6,*) ' slfluxo_land: zq2msn ', jl,along(jl),zalat,zslask
+     endif
+     zq2m=zqsdifsn +zqstar*zln2k +(zqam-zqsdifsn)*(1._realkind- exp(zslask) )
+
+     !     zy2 dummy if zunson=0
+
+     zy=sqrt( 1.0_realkind -9.0_realkind*zl2*zunson )
+     !cps111107 zy=min( zy, sqrt( 8.0_realkind/zroughsn ) -1.0_realkind )
+     zy=min( zy, sqrt( 8.0_realkind/zroussn ) -1.0_realkind )
+     zy2=zunson*zy +zunsoff
+     zy2=zy2*zlandon +zlandoff
+
+     zpar= ( zln2-2._realkind*log( 0.5_realkind*(1._realkind+zy2)) )*zrkar
+     zt2msn=( zunson*(tsnow(jl) +zthst*zpar) + zunsoff*zt2m )*zlandon + ztdumout*zlandoff
+     zq2msn=( zunson*(zqsdifsn +zqstar*zpar) + zunsoff*zq2m )*zlandon + zqdumout*zlandoff
+
+     if(lt2mmod)then
+        !     modification of t2m and q2m with respect to tke
+
+        zbouy=gravit*zhnlev*(t(jl,nlev)-tsnow(jl))/t(jl,nlev)
+
+        !     only relevant in stable situations
+
+        if(zbouy>0._realkind.and.zsnw>0._realkind) then
+
+           !     : tke > bouyancy ?
+
+           zslask=2._realkind*tke(jl,nlev)/zbouy
+
+           zweight=min(zslask,1._realkind)
+
+           zt2msn=(1._realkind-zweight)*zt2msn+zweight*t(jl,nlev)
+           zq2msn=(1._realkind-zweight)*zq2msn+zweight*zqam
+
+           weightsn(jl)=zweight
+        endif
+        !     end modification of t2m and q2m with respect to tke
+     endif                  !if(lt2mmod)then
+
+     !     l    calculate wind at 10 m height above bare soil
+
+     !     compute ustar and vstar
+
+     zust=zustarsn*zunlev/zvel
+     zvst=zustarsn*zvnlev/zvel
+
+     zl10=z10m*zmoin
+     zln10=log(z10m/zroughsn)
+     zln10k=zln10*zrkar
+
+     !     zu10 etc dummy if zunson=1.0
+
+     zslask=max(-89._realkind,zunson + zunsoff*(-zm*zust*zl10/zunlev))
+     zu10=zust*zln10k + zunlev*(1._realkind-exp(zslask))
+     zslask=max(-89._realkind,zunson + zunsoff*(-zm*zvst*zl10/zvnlev))
+     zv10=zvst*zln10k + zvnlev*(1._realkind-exp(zslask))
+
+     !     zx10 dummy if zunson=0
+
+     zx10=zunson*(1._realkind-15._realkind*zl10) + zunsoff
+     zx10=sqrt(sqrt(zx10))
+
+     zpar=(zln10 - (log( 0.5_realkind*(1._realkind+zx10*zx10) )+ 2._realkind*( log( 0.5_realkind*(1._realkind+zx10))-&
+          atan(zx10)+zrpi4 )) )*zrkar
+
+     zu10msn=( zunson*zust*zpar + zunsoff*zu10 )*zlandon+ zudumout*zlandoff
+     zv10msn=( zunson*zvst*zpar + zunsoff*zv10 )*zlandon+ zudumout*zlandoff
+
+     !     t2m, q2m, u10m and v10m for open land respectively
+     !     t2mopsn, q2mopsn, u10mopsn, v10mopsn
+
+     t2mopsn(jl)=zt2mbs*(1._realkind-zvegopl)*zfrop + zt2mopv*zvegopl*zfrop + zt2msn*zsnw
+     t2mopsn(jl)=t2mopsn(jl)/(zfrop+zsnw+zlandoff)*zlandon + ztdumout*zlandoff
+
+     q2mopsn(jl)=zq2mbs*(1._realkind-zvegopl)*zfrop +zq2mopv*zvegopl*zfrop +  zq2msn*zsnw
+     q2mopsn(jl)=max(q2mopsn(jl),0._realkind)
+     q2mopsn(jl)=q2mopsn(jl)/(zfrop+zsnw+zlandoff)*zlandon +zqdumout*zlandoff
+
+
+     if(q2mopsn(jl)>0._realkind) then
+        rh2mopsn(jl)=q2e(ps(jl),q2mopsn(jl))/t2es(t2mopsn(jl))
+     else
+        rh2mopsn(jl)=0._realkind
+     endif
+     rh2mopsn(jl)=max(min(rh2mopsn(jl),1._realkind),0._realkind)
+     rh2mopsn(jl)=rh2mopsn(jl)*zlandon + zrhdumout*zlandoff
+
+
+     u10mopsn(jl)=zu10mbs*(1._realkind-zvegopl)*zfrop + zu10mopv*zvegopl*zfrop + zu10msn*zsnw
+     u10mopsn(jl)=u10mopsn(jl)/(zfrop+zsnw+zlandoff)*zlandon + zudumout*zlandoff
+     v10mopsn(jl)=zv10mbs*(1._realkind-zvegopl)*zfrop + zv10mopv*zvegopl*zfrop + zv10msn*zsnw
+     v10mopsn(jl)=v10mopsn(jl)/(zfrop+zsnw+zlandoff)*zlandon +  zudumout*zlandoff
+
+     zustar=zustaropl*zustaropl*zfrop+  zustarsn*zustarsn*zsnw
+     zustar=zustar/(zfrop+zsnw+zlandoff)*zlandon
+     ustaropsn(jl)=sqrt(zustar)
+
+
+!!$       if(lprint.and..not.lpote)write(968,'(2i6,2f8.3,42(1pe12.4))')    &
+!!$            jl,kstep,zalat,along(jl), &
+!!$            t2mopsn(jl),q2mopsn(jl),  &
+!!$            zt2mbs,zq2mbs,zt2mopv,zq2mopv,zt2msn,zq2msn,   &
+!!$            ztotf,zmoin,&
+!!$            zhm,zthst,ztam,    &
+!!$            zunson,zunsoff,zq,zqstar,zl2,zqam
+!!$
+!!$       if(lprint2.and..not.lpote)write(268,'(2i6,2f8.3,42(1pe12.4))')    &
+!!$            jl,kstep,zalat,along(jl),  &
+!!$            t2mopsn(jl),q2mopsn(jl),   &
+!!$            zt2mbs,zq2mbs,zt2mopv,zq2mopv,zt2msn,zq2msn                    
+!!$
+!!$       if(lprint3.and..not.lpote)write(368,'(2i6,2f8.3,42(1pe12.4))')     &
+!!$            jl,kstep,zalat,along(jl),  &
+!!$            t2mopsn(jl),q2mopsn(jl),   &
+!!$            zt2mbs,zq2mbs,zt2mopv,zq2mopv,zt2msn,zq2msn
+
+     !         calculate wind at 10 m height above the forest
+
+
+     zslask=(zroughfor+zhnlev)/zroughfor
+     z01=1._realkind/(log(zslask))**2
+     z02=sqrt(zslask)*z01
+     zcneut=z01*(carman**2)
+
+     zri=zriq + z03 *( 1._realkind+zcrdq*zqam)*ztca
+
+     if( zri>0.0_realkind ) then
+        zstaon=1.0_realkind
+        zstaoff=0.0_realkind
+     else
+        zstaon=0.0_realkind
+        zstaoff=1.0_realkind
+     endif
+
+     zria=abs(zri)
+
+     !     stable richardson number > 0.
+     !     (formulae according to louis et al,1982)
+
+     zdr=2.0_realkind*zqb*zria/sqrt(1._realkind +zqd*zria)
+     zcdrag=zcneut/( 1._realkind +zdr )
+     zdr=2.0_realkind*zqb*zria*sqrt(1._realkind +zqdh*zria)
+     zcdrgh=zcneut/( 1._realkind +zdr )
+
+     !     unstable richardson number
+     !     (louis et al,1982: ecmwf)
+
+     zfmx=zqb*zria/(1._realkind+z02*zcams3*sqrt(zria))
+     zslask=zcneut*(1._realkind+3._realkind*zfmx)
+     zcdrag=zstaoff*zcneut*(1._realkind+2._realkind*zfmx) +zstaon*zcdrag
+     zcdrgh=zstaoff*zslask +zstaon*zcdrgh
+
+     zustar=sqrt(zcdrag*zdup2)
+     !     autido060523         zustar=max(zustar,0.01)
+     zustar=max(zustar,0.03_realkind)
+     ustarfor(jl)=zustar
+
+     ztotf=zhcw -zsl11*t(jl,nlev)*zecw/latvap
+     zmoin=zsl1*ztotf/( 2._realkind*(ps(jl)-dph(jl,nlev+1))*zustar**3 )
+
+     !     compute ustar and vstar
+
+     zust=zustar*zunlev/zvel
+     zvst=zustar*zvnlev/zvel
+
+     !     stable case zunson=0, unstable zunson=1
+
+     if( ztotf<0.0_realkind ) then
+        zunson=1.0_realkind
+        zunsoff=0.0_realkind
+     else
+        zunson=0.0_realkind
+        zunsoff=1.0_realkind
+     endif
+
+     zl10=z10m*zmoin
+     zln10=log(z10m/zroughfor)
+     zln10k=zln10*zrkar
+
+     !     zu10 etc dummy if zunson=1.0
+
+     zslask=max(-89._realkind,zunson + zunsoff*(-zm*zust*zl10/zunlev))
+     zu10=zust*zln10k + zunlev*(1._realkind-exp(zslask))
+     zslask=max(-89._realkind,zunson + zunsoff*(-zm*zvst*zl10/zvnlev))
+     zv10=zvst*zln10k + zvnlev*(1._realkind-exp(zslask))
+
+     !     zx10 dummy if zunson=0
+
+     zx10=zunson*(1._realkind-15._realkind*zl10) + zunsoff
+     zx10=sqrt(sqrt(zx10))
+
+     zpar=(zln10 - (log( 0.5_realkind*(1._realkind+zx10*zx10) )+ 2._realkind* &
+          ( log( 0.5_realkind*(1._realkind+zx10))-atan(zx10)+zrpi4 )) )*zrkar
+
+     !     these values are valid at 10 m height above the forest displacement height
+
+     u10mfor(jl)=zunson*zust*zpar + zunsoff*zu10
+     v10mfor(jl)=zunson*zvst*zpar + zunsoff*zv10
+
+     !         compute land-averaged values
+
+     t2ml(jl)=(t2mopsn(jl)*(zfrop+zsnw)+t2mfor(jl)*zcw)* zlandon + ztdumout*zlandoff
+     q2ml(jl)=(q2mopsn(jl)*(zfrop+zsnw)+q2mfor(jl)*zcw)
+     q2ml(jl)=max(q2ml(jl),0._realkind)*zlandon + zqdumout*zlandoff
+     rh2ml(jl)=(rh2mopsn(jl)*(zfrop+zsnw)+rh2mfor(jl)*zcw)*zlandon + zrhdumout*zlandoff
+
+     senfl(jl)=zh*zlandon
+     latfl(jl)=ze*zlandon
+
+     !     compute friction velocity for land.
+
+     zustar=ustaropsn(jl)*ustaropsn(jl)*(zfrop+zsnw)+ ustarfor(jl)*ustarfor(jl)*zcw
+     ustarl(jl)=sqrt(zustar)
+
+     !     compute effective momentum rougness for land
+
+     zlnrou= zcw/(log(zlb/zroughfor))**2 + zfrop/(log(zlb/zroughopl))**2 + &
+          zsnw/(log(zlb/zroughsn))**2+zlandoff
+
+     zrous=zlandon*zlb*exp(max(-89._realkind,-sqrt(1._realkind/zlnrou))) + &
+          0.1_realkind*zlandoff
+     z0land(jl)=zrous
+
+     !     put fluxes to zero in cases of ztsw=0., to make calculation
+     !     of temperatures in the ground in surf possible with the same code
+     !     also under the snow (i.e. zero fluxes at the surface)
+
+     !     l  derivatives of tca with respect to tc, tsc and tsnc
+
+     ztemp=(1._realkind/zracw+1._realkind/zrb+1._realkind/zrd)
+     zdtcadtc=(1._realkind/zrb)/ztemp
+     zdtcadtsc=((1._realkind-zfrsnfor)/zrd)/ztemp
+     zdtcadtsnc=(zfrsnfor/zrd)/ztemp
+
+     !       derivatives of qca with respect to tc, tsc and tsnc
+
+     ztemp1=(1._realkind-zfrsnfor)*zlatsc/(zrsoilsc+zrd)
+     ztemp2=zfrsnfor*zlatsnc/zrd 
+     ztemp=latvap/zracw+zlatc*zhvfor/zrb+ztemp1+ztemp2
+     zdqcadtc=zlatc*zhvfor/zrb*desdti(ztc)/(ps(jl)*zrepac)/ztemp
+     zdqcadtsc=ztemp1*desdti(ztsc)/(ps(jl)*zrepac)/ztemp
+     zdqcadtsnc=ztemp2*desdti(ztsnc)/(ps(jl)*zrepac)/ztemp
+     !     
+     zswitch=zlandon
+     if(zfrop<1.e-06_realkind)zswitch=0._realkind
+     senfns(jl)=zhns*zswitch
+     latfns(jl)=(-eg(jl)*(1._realkind-zvegopl)-zevopl*zvegopl)*zswitch
+     evapns(jl)=-latfns(jl)/zlatns*dtime
+     latfnsbs(jl)=-eg(jl)*zswitch
+     radfns(jl)=radfns(jl)*zswitch
+     dsenfnsdtns(jl)=-zdens*zswitch*cpair/zraopl
+     !     dlatfnsdtns(jl)=-zdens*zswitch*(zlatns*(zhvopl*zvegopl/zraopl+
+     !     &   (1.-zvegopl)/(zrsoilns+zraopl))*desdti(ztsns)/(ps(jl)*zrepac))
+     dlatfvegopldtns(jl)=-zdens*zswitch*zlatns*zhvopl*zvegopl/zraopl*desdti(ztsns)/(ps(jl)*zrepac)
+     dlatfsoilopldtns(jl)=-zdens*zswitch*zlatns*(1._realkind-zvegopl)/(zrsoilns+zraopl)*desdti(ztsns)/(ps(jl)*zrepac)
+     dlatfnsdtns(jl)=dlatfvegopldtns(jl)+dlatfsoilopldtns(jl)
+     !     ps         dhdtsns(jl)=-zdens*zswitch*( cpair/zraopl +
+     !     ps     +    zlatns*(zhvopl*zvegopl/zraopl +
+     !     ps     +   (1.-zvegopl)/(zrsoilns+zraopl))*desdti(ztsns)/( ps(jl)*zrepac))
+     dhdtsns(jl)=dsenfnsdtns(jl)+dlatfnsdtns(jl)
+     !     
+     !HERE IT IS!
+     zswitch=zlandon
+
+     !       if(zsnw<1.e-06)zswitch=0.
+     env = 0.1_realkind
+     if(zsnw<1.e-06_realkind)then
+        zswitch=0._realkind
+     elseif(zsnw>env)then
+        zswitch = 1.0_realkind
+     else
+        alfa(1) = 1.0_realkind-env/(env-1.e-06_realkind) 
+        alfa(2) = 1.0_realkind/(env-1.e-06_realkind) 
+        zswitch = alfa(1) + alfa (2)*zsnw
+     endif
+     senfsn(jl)=zhsn*zswitch
+     latfsn(jl)=-esn(jl)*zswitch
+     evapsn(jl)=-latfsn(jl)/zlatsn*dtime
+     radfsn(jl)=radfsn(jl)*zswitch
+     dsenfsndtsn(jl)=-zdens/zrasn*zswitch*cpair
+     dlatfsndtsn(jl)=-zdens/zrasn*zswitch*(zlatsn*desdti(ztsn)/( ps(jl)*zrepac) )
+     !     ps         dhdtsn(jl)=-zdens/zrasn*zlandon*zswitch*(cpair +
+     !     ps     +        zlatsn*desdti(ztsn)/( ps(jl)*zrepac) )
+     dhdtsn(jl)=dsenfsndtsn(jl)+dlatfsndtsn(jl)
+
+
+     zswitch=zlandon
+     if(zcw<1.e-06_realkind)zswitch=0._realkind
+
+
+     senfc(jl)=zhc*zswitch
+     senffor(jl)=zhcw*zswitch
+     !     ps030327         latfc(jl)=-zevfor*zlandon*zswitch
+     latfc(jl)=(-zevfor+latsnowcan(jl))*zswitch
+     evapc(jl)=-latfc(jl)/zlatc*dtime
+     latffor(jl)=-zecw*zswitch
+     radfc(jl)=radfc(jl)*zswitch
+     dsenfcdtc(jl)=-zswitch*zdens/zrb*cpair*(1._realkind-zdtcadtc)
+     dlatfcdtc(jl)=-zswitch*zdens/zrb*( zlatc*zhvfor*(desdti(ztc)/(ps(jl)*zrepac) -  zdqcadtc) )
+     dsenfcdtsc(jl)=zswitch*zdens/zrb*cpair*zdtcadtsc
+     dlatfcdtsc(jl)=zswitch*zdens/zrb*(zlatc*zhvfor*zdqcadtsc )
+     dsenfcdtsnc(jl)=zswitch*zdens/zrb*cpair*zdtcadtsnc
+     dlatfcdtsnc(jl)=zswitch*zdens/zrb*(zlatc*zhvfor*zdqcadtsnc )
+     !     ps         dhcdtc(jl)=-zswitch*zdens/zrb*( cpair*(1.-zdtcadtc) +
+     !     ps     &        zlatc*zhvfor*(desdti(ztc)/(ps(jl)*zrepac) -  zdqcadtc) )
+     !     ps         dhcdtsc(jl)=zswitch*zdens/zrb*( cpair*zdtcadtsc +
+     !     ps     &        zlatc*zhvfor*zdqcadtsc )
+     !     ps         dhcdtsnc(jl)=zswitch*zdens/zrb*( cpair*zdtcadtsnc +
+     !     ps     &        zlatc*zhvfor*zdqcadtsnc )
+     dhcdtc(jl)=dsenfcdtc(jl)+dlatfcdtc(jl)
+     dhcdtsc(jl)=dsenfcdtsc(jl)+dlatfcdtsc(jl)
+     dhcdtsnc(jl)=dsenfcdtsnc(jl)+dlatfcdtsnc(jl)
+
+     zswitch=zlandon
+     if((zcw*(1._realkind-zfrsnfor))<1.e-06_realkind)zswitch=0._realkind
+
+     senfsc(jl)=zhsc*zswitch
+     latfsc(jl)=-zesc*zswitch
+     evapsc(jl)=-latfsc(jl)/zlatsc*dtime
+     radfsc(jl)=radfsc(jl)*zswitch
+     dsenfscdtsc(jl)=-zswitch*zdens*cpair/zrd*(1._realkind-zdtcadtsc)
+     dlatfscdtsc(jl)=-zswitch*zdens*(zlatsc/(zrsoilsc+zrd)*(desdti(ztsc)/(ps(jl)*zrepac) - zdqcadtsc) )
+     dsenfscdtc(jl)=zswitch*zdens*cpair/zrd*zdtcadtc
+     dlatfscdtc(jl)=zswitch*zdens*( zlatsc/(zrsoilsc+zrd)*zdqcadtc )
+     !     ps         dhscdtsc(jl)=-zswitch*zdens*( cpair/zrd*(1.-zdtcadtsc) +
+     !     ps     &        zlatsc/(zrsoilsc+zrd)*(desdti(ztsc)/(ps(jl)*zrepac) -
+     !     ps     &        zdqcadtsc) )
+     !     ps         dhscdtc(jl)=zswitch*zdens*( cpair/zrd*zdtcadtc +
+     !     ps     &        zlatsc/(zrsoilsc+zrd)*zdqcadtc )
+     dhscdtsc(jl)=dsenfscdtsc(jl)+dlatfscdtsc(jl)
+     dhscdtc(jl)=dsenfscdtc(jl)+dlatfscdtc(jl)
+
+     zswitch=zlandon
+     if((zcw*zfrsnfor)<1.e-06_realkind)zswitch=0._realkind
+     senfsnc(jl)=zhsnc*zswitch
+     latfsnc(jl)=latfsnc(jl)*zswitch
+     evapsnc(jl)=-latfsnc(jl)/zlatsnc*dtime
+     radfsnc(jl)=radfsnc(jl)*zswitch
+     dsenfsncdtsnc(jl)=-zswitch*zdens/zrd*cpair*(1._realkind-zdtcadtsnc)
+     dlatfsncdtsnc(jl)=-zswitch*zdens/zrd*(zlatsnc*(desdti(ztsnc)/(ps(jl)*zrepac)-zdqcadtsnc) )
+     dsenfsncdtc(jl)=zswitch*zdens/zrd*cpair*zdtcadtc
+     dlatfsncdtc(jl)=zswitch*zdens/zrd*zlatsnc*zdqcadtc
+     !     ps         dhsncdtsnc(jl)=-zswitch*zdens/zrd*( cpair*(1.-zdtcadtsnc)+
+     !     ps     &        zlatsnc*(desdti(ztsnc)/(ps(jl)*zrepac)-zdqcadtsnc) )
+     !     ps         dhsncdtc(jl)=zswitch*zdens/zrd*( cpair*zdtcadtc +
+     !     ps     &        zlatsnc*zdqcadtc )
+     dhsncdtsnc(jl)=dsenfsncdtsnc(jl)+dlatfsncdtsnc(jl)
+     dhsncdtc(jl)=dsenfsncdtc(jl)+dlatfsncdtc(jl)
+
+     evapl(jl)= zcw*( evapsc(jl)*(1._realkind-zfrsnfor)+evapsnc(jl)*zfrsnfor+evapc(jl) )+evapns(jl)*zfrop+evapsn(jl)*zsnw
+
+     zecw= zesc*(1._realkind-zfrsnfor)-latfsnc(jl)*zfrsnfor+zevfor-latsnowcan(jl)
+
+     !     intended for dry-potential evaporation (unit is mm/day)
+     !     according to hydrologists this should be the evaporation from
+     !     a grass surface.
+
+     evopl(jl)=zevopl/zlatns*dtime*zlandon
+
+
+
+     !     Potential evapotranspiration 
+     !     Purpose
+     !     -------
+     !     Calculate potential evapotranspiration (PET) using definition
+     !     and method proposed by FAO. PET is a crop climate variable 
+     !     rather than an energy/water flux variable.
+     !
+     !     FAO PET is the evapotranspiration from a hypothetical crop
+     !     surface, actively growing, completely shading the ground, with
+     !     adequate water and only influenced by the atmospheric conditions.
+     !     Hence, conditions within the soil (water, temperature, nutrients...)
+     !     does not limit evapotraspiration. The hypothetical crop surface
+     !     has a uniform 'crop height of 0.12m, a fixed surface resistance
+     !     of 70s/m and an albedo of 0.23'.
+     !
+     !     Ref:
+     !     Allen etal 1997. Crop evapotranspiration: Guidelines for computing
+     !     crop water requirements. FAO irrigation and drainage paper 56.
+     !     http://www.fao.org/docrep/x0490e/x0490e00.htm
+     !     
+     !     
+     !     Input:
+     !     ------    
+     !     radfns:   net radiation         open land no snow  [W/m2]     
+     !     senfns:   sensible heat flux    open land no snow  [W/m2]
+     !     latfns:   latent heat flux      open land no snow  [W/m2]
+     !     zt2mopv:  2m temp.              open land no snow  [K] 
+     !     ps:       surface pressure                         [Pa]
+     !     zu10mopv: wind speed u10        open land no snow  [m/s]
+     !     zv10mopv: wind speed v10        open land no snow  [m/s]
+     !
+     !     Output
+     !     ------
+     !     faopet:   potential evapotranspiration             [mm/time step]
+     !
+     !     ------
+     !     psyc:     psycrometric constant                    [kPa/C]
+     !     svpc:     slope of the vap. press. vs temp. curve  [kPa/C]
+     !     uv10mopv: total 10m w. speed    open land no snow  [m/s]
+     !     uv2mopv:  total 2m wind speed   open land no snow  [m/s]
+     !     esat_opv: saturated vap. pres.  open land no snow  [kPa] 
+     !     ea_opv:   actual vapour pres.   open land no snow  [kPa]
+     !     soilfns_MJh: heat flux into soil op. land no snow  [MJ/h]
+     !     radfns_MJh:                                        [MJ/h]
+     !     t2mopv_C:                                          [C]
+
+
+
+     t2mopv_C=zt2mopv-273.15_realkind
+
+     phsyc = 0.000665_realkind*ps(jl)/1000._realkind                 
+
+     svpc = 4098._realkind*(  &
+          0.6108_realkind*exp( max(-89._realkind,17.27_realkind*t2mopv_C/(t2mopv_C+237.3_realkind) )) &
+          )/  &
+          (t2mopv_C+237.3_realkind)**2._realkind                 
+
+     rh2mopv = q2e(ps(jl),zq2mopv)/t2es(zt2mopv)
+     rh2mopv = max(min(rh2mopv,1._realkind),0._realkind)
+
+     esat_opv = 0.6108_realkind*exp(max(-89._realkind,17.27_realkind*t2mopv_C/(t2mopv_C+237.3_realkind)))
+     ea_opv   = esat_opv*rh2mopv
+
+     uv10mopv = sqrt(zu10mopv**2._realkind+zv10mopv**2._realkind) 
+     uv2mopv  = uv10mopv*4.87_realkind/(log(67.8_realkind*10._realkind-5.42_realkind))
+
+     soilfns_MJh = ( radfns(jl)+senfns(jl)+latfns(jl) ) *3600._realkind/1000000._realkind
+     radfns_MJh  = radfns(jl)*3600._realkind/1000000._realkind
+
+     faopet(jl) = (0.408_realkind*svpc*(radfns_MJh-soilfns_MJh)+      &
+          phsyc*(37._realkind/zt2mopv)*uv2mopv*(esat_opv-ea_opv))/     &
+          (svpc + phsyc*(1._realkind+0.34_realkind*uv2mopv))
+     faopet(jl) = faopet(jl)/3600._realkind*dtime
+     faopet(jl) = max(faopet(jl),0._realkind)
+
+
+     !     --- Norunda Sweden
+     lprint4=.false. 
+!!$       if(along(jl)>17.0 .and. along(jl)<17.1)then
+!!$          if(zalat>60.0.and. zalat<60.1)then
+!!$             lprint4=.true.                                 
+!!$          endif
+!!$       endif
+
+     !    --- greece, mainly  mineral soil                                      
+     lprint5=.false.                                                       
+!!$       if(along(jl)>20.5 .and. along(jl)<20.8)then                     
+!!$          if(zalat>39.7 .and. zalat<40.2)then                             
+!!$             lprint5=.true.                                                        
+!!$          endif
+!!$       endif
+
+     !    ---  spain, mainly mineral soil                                       
+     lprint6=.false.                                                       
+!!$       if(along(jl)>357.1 .and. along(jl)<357.7)then                   
+!!$          if(zalat>40.0 .and. zalat<40.7)then                             
+!!$             lprint6=.true.                                                        
+!!$          endif
+!!$       endif
+
+     lprint4=.false.
+     lprint5=.false.
+     lprint6=.false.
+
+     ! Norunda
+     !if(lprint4)write(778,'(1i6,2F8.3,50(1pe12.4))') &
+     !     jl,zalat,along(jl),  & !1-3
+     !     phsyc, & !  4
+     !     svpc,  & !  5
+     !     radfns(jl),   & !  6
+     !     senfns(jl),   & !  7
+     !     latfns(jl),   & !  8
+     !     soilfns_MJh,  & !  9
+     !     uv10mopv,     & ! 10
+     !     uv2mopv,      & ! 11
+     !     zt2mopv,      & ! 12
+     !     faopet(jl),   & ! 13
+     !     radfns_MJh,   & ! 14
+     !     soilfns_MJh,  & ! 15  
+     !     t2mopv_C,     & ! 16
+     !     radfns_MJh-soilfns_MJh,     & ! 17
+     !     esat_opv,     & ! 18
+     !     ea_opv,& ! 19
+     !     esat_opv-ea_opv,     & ! 20
+     !     svegopl(jl),  & ! 21
+     !     drolddt(jl),  & ! 22
+     !     senfc(jl),    & ! 23 canopy
+     !     latfc(jl),    & ! 24
+     !     radfc(jl),    & ! 25
+     !     senfsc(jl),   & ! 26 below canopy
+     !     latfsc(jl),   & ! 27
+     !     radfsc(jl),   & ! 28
+     !     senfsn(jl),   & ! 29 now  forest
+     !     latfsn(jl),   & ! 30
+     !     radfsn(jl),   & ! 31
+     !     senfl(jl),    & ! 32 land ave
+     !     latfl(jl),    & ! 33 land ave
+     !     etrfor(jl),   & ! 34 transp for
+     !     etropl(jl),   & ! 35 transp opl
+     !     zevopl,& ! 36
+     !     eg(jl),& ! 37
+     !     zlatns,& ! 38 = latvap+latice*(0.5-sign(0.5,ztsns-tmelt))
+     !     zqsdifns-zqam,& ! 39
+     !     zqsdifns,     & ! 40
+     !     zqam,  & ! 41
+     !     zrsoilns,     & ! 42
+     !     zra,   & ! 43
+     !     latice,& ! 44
+     !     zrsra3,& ! 45
+     !     zrsra3_old                    
+
+     ! norunda
+     !if(lprint4)write(001,'(1i6,2F8.3,8(1pe12.4))') &
+     !     jl,zalat,along(jl),  & ! 1-3
+     !     zrsra3,& !   4
+     !     zrsra3_old,   & 
+     !     zrsrasum,     &
+     !     zrsrasum_old
+
+     ! greece
+     !if(lprint5)write(002,'(1i6,2F8.3,8(1pe12.4))') &
+     !     jl,zalat,along(jl),  & ! 1-3
+     !     zrsra3,& !   4
+     !     zrsra3_old,   & 
+     !     zrsrasum,     &
+     !     zrsrasum_old
+     ! spain
+     !if(lprint6)write(003,'(1i6,2F8.3,8(1pe12.4))') &
+     !     jl,zalat,along(jl),  & ! 1-3
+     !     zrsra3,& !   4
+     !     zrsra3_old,   &  
+     !     zrsrasum,     &
+     !     zrsrasum_old
+
+     !     forest
+     !     ps         if(lprint.and..not.lpote)write(370,100) 1,1.,
+     !     ps     & -senfc(jl),-senfsc(jl)*(1.-zfrsnfor)-senfsnc(jl)*zfrsnfor,
+     !     ps     & -senffor(jl),-latfc(jl),
+     !     ps     & -latfsc(jl)*(1.-zfrsnfor)-latfsnc(jl)*zfrsnfor,-latffor(jl),
+     !     ps     & (1.-zviewfl)*zemfor*(zradl+zlwupforfloor-stebol*2.*ztc**4),
+     !     ps     & lwdnsrf,lwnetsrf,lwup,
+     !     ps     & swnetcan,zviewfs*zrads,swnetsrf,swup
+     !     open land
+     !     ps         if(lprint.and..not.lpote)write(380,100) 1,1.,
+     !     ps     & 0.,-(zfrop*senfns(jl)+zsnw*senfsn(jl))/(zfrop+zsnw),
+     !     ps     & -(zfrop*senfns(jl)+zsnw*senfsn(jl))/(zfrop+zsnw),0.,
+     !     ps     & -(zfrop*latfns(jl)+zsnw*latfsn(jl))/(zfrop+zsnw),
+     !     ps     & -(zfrop*latfns(jl)+zsnw*latfsn(jl))/(zfrop+zsnw),
+     !     ps     & 0.,zradl,lwnetsrfopn,lwupopn,
+     !     ps     & 0.,zrads,swnetsrfopn,swupopn
+     !     ps 100  format(i4,1x,f7.3,14(1x,f9.3))
+
+
+       if(lprint.and..not.lpote)write(901,'(2i6,2f8.3,93(1pe12.4))')    &
+            jl,kstep,zalat,along(jl), &
+            senfns(jl),senfc(jl),senfsc(jl),senfsn(jl),    &
+            senfsnc(jl),&
+            latfns(jl),latfc(jl),latfsc(jl),latfsn(jl),    &
+            latfsnc(jl),&
+            radfns(jl),radfc(jl),radfsc(jl),radfsn(jl),    &
+            radfsnc(jl),&
+            ztc,ztca,ztsc,tsns(jl),tsnow(jl),tsnc(jl),     &
+            svegfor(jl),drolddt(jl),dsolddt(jl),    &
+            senfl(jl),latfl(jl),      &
+            ztam,zqam,zqsdifsn,zri,ztseff,   &
+            zqca,zrb,zrd,zrah,zraopl,zrasn,  &
+            zracw,t2ml(jl),t2mopsn(jl),t2mfor(jl),  &
+            eg(jl),zhvfor,zhvopl,zevfor,zevopl,     &
+            zecw,esn(jl),      &
+            zhns,zhsn,zhc,zhsc,zhcw,zhsnc,   &
+            zhvoldfor,evhvopl(jl),etropl(jl),&
+            zvegmmopl,zdeltaoplold,zdeltaopl,zvegp, &
+            evhvfor(jl),etrfor(jl),zvegmmfor,&
+            zdeltaforold,zdeltafor,zvegpfor,radf(jl),      &
+            zrouscw,zrousopl,zroussn, &
+            zrads,zradl,zevapeff,zhvegvel,   &
+            zlaiopn_int,zlai_conif,lai_decid(jl),   &
+            rh2mopsn(jl),rh2mfor(jl),rh2ml(jl),     &
+            q2mopsn(jl),q2mfor(jl),q2ml(jl),ps(jl), &
+            tskin(jl),emskin(jl),     &
+            latfl(jl)/latvap*dtime/rhoh2o,   &
+            evapl(jl)
+
+
+       if(lprint2.and..not.lpote)write(201,'(2i6,2f8.3,85(1pe12.4))') &
+            jl,kstep,zalat,along(jl),      &
+            senfns(jl),senfc(jl),senfsc(jl),senfsn(jl),  &
+            senfsnc(jl),     &
+            latfns(jl),latfc(jl),latfsc(jl),latfsn(jl),  &
+            latfsnc(jl),     &
+            radfns(jl),radfc(jl),radfsc(jl),radfsn(jl),  &
+            radfsnc(jl),     &
+            ztc,ztca,ztsc,tsns(jl),tsnow(jl),tsnc(jl),   &
+            svegfor(jl),drolddt(jl),dsolddt(jl),  &
+            senfl(jl),latfl(jl),    &
+            ztam,zqam,zqsdifsn,zri,ztseff, &
+            zqca,zrb,zrd,zrah,zraopl,zrasn,&
+            zracw,t2ml(jl),t2mopsn(jl),t2mfor(jl),&
+            eg(jl),zhvfor,zhvopl,zevfor,zevopl,   &
+            zecw,esn(jl),    &
+            zhns,zhsn,zhc,zhsc,zhcw,zhsnc, &
+            zhvoldfor,evhvopl(jl),etropl(jl),     &
+            zvegmmopl,zdeltaoplold,zdeltaopl,zvegp,      &
+            evhvfor(jl),etrfor(jl),zvegmmfor,     &
+            zdeltaforold,zdeltafor,zvegpfor,radf(jl),    &
+            zrouscw,zrousopl,zroussn,      &
+            zrads,zradl,zevapeff,zhvegvel, &
+            zlaiopn_int,zlai_conif,lai_decid(jl), &
+            rh2mopsn(jl),rh2mfor(jl),rh2ml(jl)                                 
+
+
+       if(lprint3.and..not.lpote)write(301,'(2i6,2f8.3,85(1pe12.4))')  &
+            jl,kstep,zalat,along(jl),      &
+            senfns(jl),senfc(jl),senfsc(jl),senfsn(jl),  &
+            senfsnc(jl),     &
+            latfns(jl),latfc(jl),latfsc(jl),latfsn(jl),  &
+            latfsnc(jl),     &
+            radfns(jl),radfc(jl),radfsc(jl),radfsn(jl),  &
+            radfsnc(jl),     &
+            ztc,ztca,ztsc,tsns(jl),tsnow(jl),tsnc(jl),   &
+            svegfor(jl),drolddt(jl),dsolddt(jl),  &
+            senfl(jl),latfl(jl),    &
+            ztam,zqam,zqsdifsn,zri,ztseff, &
+            zqca,zrb,zrd,zrah,zraopl,zrasn,&
+            zracw,t2ml(jl),t2mopsn(jl),t2mfor(jl),&
+            eg(jl),zhvfor,zhvopl,zevfor,zevopl,   &
+            zecw,esn(jl),    &
+            zhns,zhsn,zhc,zhsc,zhcw,zhsnc, &
+            zhvoldfor,evhvopl(jl),etropl(jl),     &
+            zvegmmopl,zdeltaoplold,zdeltaopl,zvegp,      &
+            evhvfor(jl),etrfor(jl),zvegmmfor,     &
+            zdeltaforold,zdeltafor,zvegpfor,radf(jl),    &
+            zrouscw,zrousopl,zroussn,      &
+            zrads,zradl,zevapeff,zhvegvel, &
+            zlaiopn_int,zlai_conif,lai_decid(jl), &
+            rh2mopsn(jl),rh2mfor(jl),rh2ml(jl)                                 
+
+       !    for potential evaporation case:                                            
+!!$
+!!$
+!!$       if(lprint.and.lpote)write(941,'(2i6,2f8.3,85(1pe12.4))') &
+!!$            jl,kstep,zalat,along(jl),      &
+!!$            senfns(jl),senfc(jl),senfsc(jl),senfsn(jl),  &
+!!$            senfsnc(jl),     &
+!!$            latfns(jl),latfc(jl),latfsc(jl),latfsn(jl),  &
+!!$            latfsnc(jl),     &
+!!$            radfns(jl),radfc(jl),radfsc(jl),radfsn(jl),  &
+!!$            radfsnc(jl),     &
+!!$            ztc,ztca,ztsc,tsns(jl),tsnow(jl),tsnc(jl),   &
+!!$            svegfor(jl),drolddt(jl),dsolddt(jl),  &
+!!$            senfl(jl),latfl(jl),    &
+!!$            ztam,zqam,zqsdifsn,zri,ztseff, &
+!!$            zqca,zrb,zrd,zrah,zraopl,zrasn,&
+!!$            zracw,t2ml(jl),t2mopsn(jl),t2mfor(jl),&
+!!$            eg(jl),zhvfor,zhvopl,zevfor,zevopl,   &
+!!$            zecw,esn(jl),    &
+!!$            zhns,zhsn,zhc,zhsc,zhcw,zhsnc, &
+!!$            zhvoldfor,evhvopl(jl),etropl(jl),     &
+!!$            zvegmmopl,zdeltaoplold,zdeltaopl,zvegp,      &
+!!$            evhvfor(jl),etrfor(jl),zvegmmfor,     &
+!!$            zdeltaforold,zdeltafor,zvegpfor,radf(jl),    &
+!!$            zrouscw,zrousopl,zroussn,      &
+!!$            zrads,zradl,zevapeff,zhvegvel, &
+!!$            zlaiopn_int,zlai_conif,lai_decid(jl), &
+!!$            rh2mopsn(jl),rh2mfor(jl),rh2ml(jl)                                 
+
+
+!!$       if(lprint2.and.lpote)write(241,'(2i6,2f8.3,85(1pe12.4))')&
+!!$            jl,kstep,zalat,along(jl),      &
+!!$            senfns(jl),senfc(jl),senfsc(jl),senfsn(jl),  &
+!!$            senfsnc(jl),     &
+!!$            latfns(jl),latfc(jl),latfsc(jl),latfsn(jl),  &
+!!$            latfsnc(jl),     &
+!!$            radfns(jl),radfc(jl),radfsc(jl),radfsn(jl),  &
+!!$            radfsnc(jl),     &
+!!$            ztc,ztca,ztsc,tsns(jl),tsnow(jl),tsnc(jl),   &
+!!$            svegfor(jl),drolddt(jl),dsolddt(jl),  &
+!!$            senfl(jl),latfl(jl),    &
+!!$            ztam,zqam,zqsdifsn,zri,ztseff, &
+!!$            zqca,zrb,zrd,zrah,zraopl,zrasn,&
+!!$            zracw,t2ml(jl),t2mopsn(jl),t2mfor(jl),&
+!!$            eg(jl),zhvfor,zhvopl,zevfor,zevopl,   &
+!!$            zecw,esn(jl),    &
+!!$            zhns,zhsn,zhc,zhsc,zhcw,zhsnc, &
+!!$            zhvoldfor,evhvopl(jl),etropl(jl),     &
+!!$            zvegmmopl,zdeltaoplold,zdeltaopl,zvegp,      &
+!!$            evhvfor(jl),etrfor(jl),zvegmmfor,     &
+!!$            zdeltaforold,zdeltafor,zvegpfor,radf(jl),    &
+!!$            zrouscw,zrousopl,zroussn,      &
+!!$            zrads,zradl,zevapeff,zhvegvel, &
+!!$            zlaiopn_int,zlai_conif,lai_decid(jl), &
+!!$            rh2mopsn(jl),rh2mfor(jl),rh2ml(jl)                                 
+
+
+!!$       if(lprint3.and.lpote)write(341,'(2i6,2f8.3,85(1pe12.4))')&
+!!$            jl,kstep,zalat,along(jl),      &
+!!$            senfns(jl),senfc(jl),senfsc(jl),senfsn(jl),  &
+!!$            senfsnc(jl),     &
+!!$            latfns(jl),latfc(jl),latfsc(jl),latfsn(jl),  &
+!!$            latfsnc(jl),     &
+!!$            radfns(jl),radfc(jl),radfsc(jl),radfsn(jl),  &
+!!$            radfsnc(jl),     &
+!!$            ztc,ztca,ztsc,tsns(jl),tsnow(jl),tsnc(jl),   &
+!!$            svegfor(jl),drolddt(jl),dsolddt(jl),  &
+!!$            senfl(jl),latfl(jl),    &
+!!$            ztam,zqam,zqsdifsn,zri,ztseff, &
+!!$            zqca,zrb,zrd,zrah,zraopl,zrasn,&
+!!$            zracw,t2ml(jl),t2mopsn(jl),t2mfor(jl),&
+!!$            eg(jl),zhvfor,zhvopl,zevfor,zevopl,   &
+!!$            zecw,esn(jl),    &
+!!$            zhns,zhsn,zhc,zhsc,zhcw,zhsnc, &
+!!$            zhvoldfor,evhvopl(jl),etropl(jl),     &
+!!$            zvegmmopl,zdeltaoplold,zdeltaopl,zvegp,      &
+!!$            evhvfor(jl),etrfor(jl),zvegmmfor,     &
+!!$            zdeltaforold,zdeltafor,zvegpfor,radf(jl),    &
+!!$            zrouscw,zrousopl,zroussn,      &
+!!$            zrads,zradl,zevapeff,zhvegvel, &
+!!$            zlaiopn_int,zlai_conif,lai_decid(jl), &
+!!$            rh2mopsn(jl),rh2mfor(jl),rh2ml(jl)
+
+
+
+40 enddo
+  return
+end subroutine slfluxo_land
+

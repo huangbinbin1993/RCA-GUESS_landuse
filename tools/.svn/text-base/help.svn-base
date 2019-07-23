@@ -1,0 +1,62 @@
+
+Usage: makedepf90 [options] sourcefile(s)
+
+Options:
+
+-h	print this message to stdout and quit.
+
+-V	print version and copyright information to stdout and quit.
+
+-W	print warning messages about missing includes/modules.
+
+-m fmt	Write mod-file names using the format 'fmt'.
+	'fmt' may contain any of the following modifiers:
+	  '%%' for '%'
+	  '%f' for name of the source file (without suffix),
+	  '%m' for 'modulename' (in lowercase)
+	  '%M' for 'MODULENAME' (in uppercase).
+	Default: "%f.o".
+
+-u module
+	Ignore modules named 'module'.
+
+-d file	Make all targets dependent on 'file'.
+
+-r rule	Add 'rule' (indented by a tab) to all dependency lines,
+	except lines given rule(s) with the -R option below.
+	'rule' may contain the modifiers:
+	  '%f' for the name (without suffix) of the source file that
+	       line was created for.
+	  '%%' for '%'
+
+-R pattern rule
+	Add 'rule' (indented by a tab) to the dependency
+	line for files matching 'pattern', where 'pattern' is a
+	"shell pattern", i.e it may contain the wildcards
+	  '*' for any number of any characters
+	  '?' for any character
+	  '[abc]' for any of 'a', 'b' or 'c'.
+
+-fixed	Treat all files as fixed format.
+
+-free	Treat all files as free format.
+
+-o name	Create a dependency line + rule for linking the final
+	executable 'name'.
+
+-l rule	Use 'rule' for linking the executable.
+	Default: $(FC) -o $@ $(FFLAGS) $(LDFLAGS) $(FOBJ) $(LIBS)
+
+-coco	Look for coco set-files.  Implies '-free'.
+
+-D NAME	Define pre-processor symbol 'NAME'
+
+-b PATH	Assume object files are placed in PATH.
+
+-nosrc	Remove the explicit dependency on the source file
+
+-I PATH1:PATH2:...
+	Search path(s) for source files
+
+
+Report bugs to erik.edelmann@iki.fi

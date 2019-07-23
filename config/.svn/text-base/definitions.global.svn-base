@@ -1,0 +1,12 @@
+#
+#THESE DEFINITIONS CONTROL WHAT CODE IS GENERATED!!
+#
+#-DMPI_SRC use the MPI-library
+#-DLITTLE_ENDIAN 
+#-DDEBUG    more verbose output
+#-DUSING_NETCDF netcdf-files for restart
+
+DEFINITIONS = -DMPI_SRC -DLITTLE_ENDIAN -DUSING_NETCDF
+#DEFINITIONS = -DMPI_SRC -DLITTLE_ENDIAN -DUSING_NETCDF -DDEBUG
+
+SUPPORTED_ARCH = ekopmpi ekmanF ekmanPGI ekoasis eoasis3 eexcon ekman gimle gondul nrlx018.serial nrlx042 nrlx042_gnu nrlx042_NONSTOP tornado SuperSonicIcc gimleF gimleF11 gimle11 gimleD gimleSerial gimleSerialIcc KryptonF Krypton hydra hydraFASTCOMPILING nehalem nehalemF bi biF

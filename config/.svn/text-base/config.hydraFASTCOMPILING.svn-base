@@ -1,0 +1,45 @@
+
+OPT := -O0 -ansi-alias -finline -inline-level=2  -scalar-rep -no-prec-div 
+
+
+
+CC      := mpicc -cc=icc 
+CCFLAGS := $(OPT) $(DBG) $(DEFINITIONS)   -strict-ansi
+
+CXX     := mpicc -cc=icc 
+CXXFLAGS := $(OPT) $(DBG) $(DEFINITIONS)   -strict-ansi
+
+FC := mpif90 -fc=ifort 
+
+FDBG := $(DBG) -traceback 
+
+FHACKS := -heap-arrays 1 -fp-speculation=safe -fp-model precise 
+#FHACKS :=   -fp-model strict -fltconsistency
+#FHACKS :=    -fltconsistency
+FINCLUDE := -I$(ROOTDIR)/$(ARCH)/rcamod  -I$(ROOTDIR)/include/ 
+
+ifeq (USING_NETCDF,$(findstring USING_NETCDF,$(DEFINITIONS)))
+    NETCDFPATH :=/usr/local
+    FINCLUDE += -I$(NETCDFPATH)/include/
+endif
+
+FCFLAGS := $(OPT) $(FDBG) $(FHACKS) $(DEFINITIONS) $(FINCLUDE) $(TRACE)
+
+# xlf (IBM/AIX), ifort (Intel/Linux) (and others) always produce a lower-case module name
+MODNAME = $(shell echo $(*F) | tr "[:upper:]" "[:lower:]")
+MODEXT := mod
+
+LD          := $(FC) $(DBG)
+LD_MPP      :=  -L /usr/lib/gcc/x86_64-redhat-linux/4.1.2 -lstdc++    $(NCDF)
+
+ifeq (USING_NETCDF,$(findstring USING_NETCDF,$(DEFINITIONS)))
+	LD_MPP +=-L$(NETCDFPATH)/lib  -lnetcdf -lnetcdff -Wl,-rpath,$(NETCDFPATH)/lib 
+
+endif
+
+AR      := xiar
+ARFLAGS := rv
+MV      := mv
+RM      := rm -f
+MKDIR   := mkdir
+RMDIR   := rmdir

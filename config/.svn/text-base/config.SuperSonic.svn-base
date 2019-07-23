@@ -1,0 +1,40 @@
+DEFINITIONS =   -DMONTH_FILE   -DLITTLE_ENDIAN 
+MPIPATH := /home/kupiainen/CODE/utils/MPICH2/gcc4.3.2
+MPIINCLUDES := -I$(MPIPATH)/include
+MPILIBS     := -L$(MPIPATH)/lib -lmpich -lmpifmpich -lpthread
+
+
+
+
+
+#CRAYDEF := -DNONCRAYF
+
+CC      := gcc 
+CCFLAGS := $(OPT) $(DBG) $(DEFINITIONS) $(MPIINCLUDES) 
+
+CXX      := gcc 
+CXXFLAGS := $(OPT) $(DBG) $(DEFINITIONS) $(MPIINCLUDES)
+ 
+FC := gfortran
+
+FDBG := $(DBG) -Wuninitialized -Wunused-parameter -Waliasing
+FHACKS :=  #-mp  
+FINCLUDE := -I$(ROOTDIR)/$(ARCH)/rcamod  -I$(ROOTDIR)/include/ $(MPIINCLUDES)
+FCFLAGS := $(OPT) $(FDBG) $(FHACKS) $(DEFINITIONS) $(MPI_SPECIAL) $(FINCLUDE) $(TRACE)
+
+
+MODNAME = $(shell echo $(*F) | tr "[:upper:]" "[:lower:]")
+MODEXT := mod
+
+LD          := $(FC)
+LD_MPP      := $(FC)
+
+LDFLAGS     := -traceback -lsvml -lirc
+
+
+AR      := ar
+ARFLAGS := rv
+MV      := mv
+RM      := rm -f
+MKDIR   := mkdir
+RMDIR   := rmdir

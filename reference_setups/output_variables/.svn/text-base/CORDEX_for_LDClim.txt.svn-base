@@ -1,0 +1,66 @@
+!Grib code	Short name	Freq	Factor		CORDEX variable name
+!---------	----------	----	------		--------------------
+62 105 4006	lsprc		qq	1/10800		prls
+1 105 0		sp		qq	1		ps
+116 105 3006	swdwnsrf	qq	1		rsds
+115 105 3006	lwdwnsrf	qq	1		rlds
+242 105 31	latf_a		qq	-1		hfls
+242 105 25	senf_a		qq	-1		hfss
+63 105 4006	convprc		qq	1/10800		prc
+65 105 4006	snowprc		qq	1/10800		prsn
+242 105 37	momfu_a		pp	1		tauu
+242 105 43	momfv_a		pp	1		tauv
+250 105 63	tseff_i		pp	1		ts
+!
+! Pressure level data:
+11 100 200	t200		pp	1		ta200
+51 100 200	q200		pp	1		hus200
+33 100 200	u200		pp	1		ua200
+34 100 200	v200		pp	1		va200
+6 100 200	gpot200		pp	1/9.80665	zg200
+11 100 250	t250		pp	1		ta250
+51 100 250	q250		pp	1		hus250
+33 100 250	u250		pp	1		ua250
+34 100 250	v250		pp	1		va250
+6 100 250	gpot250		pp	1/9.80665	zg250
+11 100 300	t300		pp	1		ta300
+51 100 300	q300		pp	1		hus300
+33 100 300	u300		pp	1		ua300
+34 100 300	v300		pp	1		va300
+6 100 300	gpot300		pp	1/9.80665	zg300
+11 100 400	t400		pp	1		ta400
+51 100 400	q400		pp	1		hus400
+33 100 400	u400		pp	1		ua400
+34 100 400	v400		pp	1		va400
+6 100 400	gpot400		pp	1/9.80665	zg400
+11 100 500	t500		pp	1		ta500
+51 100 500	q500		pp	1		hus500
+33 100 500	u500		pp	1		ua500
+34 100 500	v500		pp	1		va500
+6 100 500	gpot500		pp	1/9.80665	zg500
+11 100 600	t600		pp	1		ta600
+51 100 600	q600		pp	1		hus600
+33 100 600	u600		pp	1		ua600
+34 100 600	v600		pp	1		va600
+6 100 600	gpot600		pp	1/9.80665	zg600
+11 100 700	t700		pp	1		ta700
+51 100 700	q700		pp	1		hus700
+33 100 700	u700		pp	1		ua700
+34 100 700	v700		pp	1		va700
+6 100 700	gpot700		pp	1/9.80665	zg700
+11 100 850	t850		pp	1		ta850
+51 100 850	q850		pp	1		hus850
+33 100 850	u850		pp	1		ua850
+34 100 850	v850		pp	1		va850
+6 100 850	gpot850		pp	1/9.80665	zg850
+11 100 925	t925		pp	1		ta925
+51 100 925	q925		pp	1		hus925
+33 100 925	u925		pp	1		ua925
+34 100 925	v925		pp	1		va925
+6 100 925	gpot925		pp	1/9.80665	zg925
+11 100 975	t975		pp	1		ta975
+51 100 975	q975		pp	1		hus975
+33 100 975	u975		pp	1		ua975
+34 100 975	v975		pp	1		va975
+6 100 975	gpot975		pp	1/9.80665	zg975
+!

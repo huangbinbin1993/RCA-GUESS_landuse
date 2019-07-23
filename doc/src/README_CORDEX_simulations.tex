@@ -1,0 +1,287 @@
+\documentclass[a4paper]{article}
+
+\usepackage{vmargin}
+\setpapersize{A4}
+%            left      right       headheight  footheight
+%                 top       bottom      headskip  footskip
+\setmarginsrb{2cm}{2cm}{2cm}{2cm}{0pt}{0mm}{0pt}{15mm}
+
+\usepackage{verbatim}
+\usepackage{rotating}
+
+\setlength{\parindent}{0cm}
+
+\usepackage[ps2pdf,colorlinks=true,a4paper=true]{hyperref}
+\hypersetup{
+pdfauthor = {Rossby Centre, SMHI},
+pdftitle = {Guide to CORDEX simulations with RCA4},
+pdfsubject = {report},
+pdfcreator = {LaTeX with hyperref package},
+pdfproducer = {dvips + ps2pdf}}
+
+
+\title{Guide to CORDEX simulations with RCA4} 
+\author{Patrick Samuelsson}
+
+\begin{document}
+\maketitle
+\tableofcontents  
+\newpage
+
+\setlength{\parskip}{2mm}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Introduction}
+
+This is a short guide for setting up and perform CORDEX simulations with RCA4 on gimle and ekman.
+If you need any more detailed explantaions on RCA please refer to the RCA user guide \verb+README.pdf+.
+
+RCA code developers should refer to Section \ref{sec:compile} while baby-sitting colleagues
+can go directly to Section \ref{sec:setup}.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Check out and compiling}
+\label{sec:compile}
+
+\begin{itemize}
+\item The code for CORDEX production simulations is under branch RCA4\_CORDEX. Check it out like this:
+
+\begin{verbatim}
+svn co svn+ssh://$USER@gimle.nsc.liu.se/home/rossby/svn/rca_repository/rca/branches/RCA4_CORDEX SRC_DIR
+\end{verbatim}
+
+\item Make sure you have the adequate compilers, modules etc. loaded/available.
+
+On gimle:
+
+\begin{verbatim}
+module load intel/12.0.3
+module add impi/4.0.1.007
+\end{verbatim}
+
+On ekman:
+
+\begin{verbatim}
+module load easy/1.8.ekman
+module load heimdal/standard
+module load beta-modules
+module load i-compilers/12.0.5
+module load openmpi/1.4.4-intel-12
+module load netcdf/4.0.1
+module load afsws
+module add subversion
+\end{verbatim}
+
+\item Make sure that your code is up to date and that you do not have any local changes before you compile.
+Thus, it is always good to do \verb+svn update+ and \verb+svn status+ before compiling.
+
+\item Compile the code with \verb+make ARCH=gimle+ or \verb+make ARCH=ekman+.
+For ekman simulations you can compile your code on \verb+k33n39.pdc.kth.se+ instead to avoid problems with
+exceeding time limit during compilation.
+
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Set up a result directory and submit a job}
+\label{sec:setup}
+
+\begin{itemize}
+
+\item Find out where your result directory, \verb+WORK_OUT+, should be located
+
+On gimle:
+
+The \verb+WORK_OUT+ directory already exists under \verb+/nobackup/rossby15/rossby/joint_exp/cordex+.
+You find the correct identification number, directory, from the list on \verb+http://www-int/cmp/jsp/polopoly.jsp?d=1157+.
+You must belong to group \verb+cordex+ to be able to write under the \verb+cordex+ directory.
+
+On ekman:
+
+Create a \verb+WORK_OUT+ directory under \verb+/cfs/ekman/scratch/x/xxxx/WORK_OUT+.
+Results produced here should then be transfered to correct directory under \verb+/nobackup/rossby15/rossby/joint_exp/cordex+
+on gimle/vagn.
+
+\item Appropriate executable, namelist files and runScript
+
+\begin{itemize}
+\item Copy appropriate executable, \verb+rca.x+ 
+from an already performed experiement under
+
+\verb+/nobackup/rossby15/rossby/joint_exp/cordex/20yyxx+ on gimle,
+
+\verb+/cfs/ekman/scratch/x/xxxx/WORK_OUT+ on ekman,
+
+or from \verb+SRC_DIR/$ARCH/bin/rca.x+.
+
+\item Copy appropriate namelist files to \verb+WORK_OUT+ 
+from an already performed experiement under
+
+\verb+/nobackup/rossby15/rossby/joint_exp/cordex/20yyxx+ on gimle,
+
+\verb+/cfs/ekman/scratch/x/xxxx/WORK_OUT+ on ekman,
+
+or from \verb+SRC_DIR/reference_setups/domains/Cordex/xxxx/+
+
+\item Copy appropriate runScript to \verb+WORK_OUT+ 
+from an already performed experiement under
+
+\verb+/nobackup/rossby15/rossby/joint_exp/cordex/20yyxx+ on gimle,
+
+\verb+/cfs/ekman/scratch/x/xxxx/WORK_OUT+ on ekman,
+
+or from \verb+SRC_DIR/tools/runScriptGimle_CORDEX+
+
+\end{itemize}
+
+\item Edit your \verb+WORK_OUT/namelists.dat+:
+\begin{itemize}
+\item \verb+&institute+
+
+\verb+inst='nsc'+ for gimle or \verb+inst='pdc'+ for ekman
+\item \verb+&scenario+
+
+Should be empty for an ERA Interim forced simulations or one of
+\verb+lrcp+,\verb+lrcp45+ or \verb+lrcp85+ set to \verb+.true.+ for 
+a control/scenario simulation.
+
+\item \verb+&namgcm+
+
+One of \verb+lecmwf+, \verb+lcanesm2+ or \verb+lcnrm+ should be set to \verb+.true.+.
+
+\item \verb+&namrestart+
+
+Set \verb+doRestart=.false.+ (see Section \ref{sec:restart} for restart) and specify
+appropriate starttime with \verb+reyear=+ and \verb+remonth=+.
+
+The default interval writing restart files is once per year. You can specify \verb+monthly=.true.+
+to write restart files once per month or specify your prefered interval in number of timesteps
+between restart files by setting \verb+ntimesteps=xxx+.
+
+\end{itemize}
+
+\item Edit your \verb+WORK_OUT/runScript+
+
+On gimle edit \verb+WORK_OUT/runScriptGimle_CORDEX+:
+\begin{itemize}
+\item \verb+#SBATCH -n xx ##number of processors+
+
+Recommended number of processors for Europe is 32 and for Africa 48.
+\item \verb+#SBATCH -t xx:00:00+
+
+Maximum allowed wallclock time is 168 hours (7 days).
+\end{itemize}
+
+On ekman edit \verb+WORK_OUT/runScriptEkman_CORDEX+:
+
+Set appropriate number of processors as a factor of 8, e.g. \verb+NPROC=192+
+
+\item Edit your \verb+WORK_OUT/gcmpaths.xxx+ file.
+
+\item Submit job
+
+On gimle:
+
+Do \verb+cd WORK_OUT+ and submit job as \verb+sbatch -p nehalem runScriptGimle_CORDEX+
+
+On ekman:
+
+Do \verb+cd WORK_OUT+ and submit job as \verb+esubmit -n24 -t60 ./runScriptEkman_CORDEX+
+
+where \verb+-n24+ is number of nodes (corresponing to number of processors in runScript) and
+\verb+-t10080+ is requested time in minutes. Maximum allowed time is 7 days which correspond to 10080 minutes.
+Note that you must make sure that your kerberos ticket is valid during the whole simulation. The default
+requested time is 30 days if you use the script \verb+kth.sh+ provided by Patrik Martinsson for Linda.
+So, if you have an old valid ticket it may be best to remove it and request a new one for 30 days.
+
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Restart of a simulation}
+\label{sec:restart}
+
+A restart of RCA may be needed for different reasons:
+
+\begin{itemize}
+\item A simulation ended in an unexpected way.
+\item The maximum allowed wallclock time is exceeded before the simulation should end.
+\item A scenario should follow on a prevoius control simulation.
+\end{itemize}
+
+By default RCA writes a restart file January 1 each simulation year (\verb+dump_yyyy010100.nc+).
+Thus, to perform a restart of RCA you need such a file along with the
+appropriate namelist files and runScript in a directory. The best, or most safe, habit
+is probably to make a restart in a directory different from the one where the
+previous results were written, independent on the reason for a restart.
+Thus, let's say we have now \verb+WORK_OUT_OLD/+ and \verb+WORK_OUT_NEW/+, respectively.
+
+\begin{itemize}
+\item \verb+cp WORK_OUT_OLD/rca.x WORK_OUT_NEW/+ 
+\item \verb+cp WORK_OUT_OLD/model_* WORK_OUT_NEW/+ 
+\item \verb+cp WORK_OUT_OLD/namelists* WORK_OUT_NEW/+ 
+\item \verb+cp WORK_OUT_OLD/gcmpaths* WORK_OUT_NEW/+ 
+\item \verb+cp WORK_OUT_OLD/runScript* WORK_OUT_NEW/+ 
+\item Copy the appropriate restart file, e.g. 
+\verb+cp WORK_OUT_OLD/dump_yyyy010100.nc WORK_OUT_NEW/+
+\end{itemize}
+
+Depending on the reason for the restart you need to edit your namelist files
+more or less. For example, if you start a scenario you must specify appropriate
+emission scenario under \verb+&scenario+ in \verb+namelists.dat+ and you must specify
+an appropriate path to lateral boundary conditions in your \verb+gcmpaths+-file.
+
+At least you must edit \verb+&namrestart+:
+Set \verb+doRestart=.true.+ and specify
+start time so that \verb+reyear=yyyy+ and \verb+remonth=01+ correspond to the time of
+the current restart file (\verb+dump_yyyy010100.nc+).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Transfering of files from ekman to vagn/gimle}
+\label{sec:filetransfer}
+File transfer between Ekman and Vagn/Gimle has to be done from Ekman. 
+To use \verb+rsync+ you have to be logged on to \verb+ekman-rsync@pdc.kth.se+. An \verb+rsync+ example: 
+
+\verb+rsync -ave ssh ekman_folder sm_xxx@gimle.nsc.liu.se:/nobackup/rossby15/sm_xxx/from_ekman/+
+
+An alternative is to use the NSC 'asynchronous file transfer tool', FFV, which is design
+for transferring large amount of data between Ekman and Vagn (see \verb+www.nsc.liu.se/~perl/ffv/+). 
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Analyse a simulation}
+\label{sec:analyse}
+
+On gimle:
+
+At any moment during a simulation you can submit the script \verb+analysis_script.sh+
+to recieve a pdf-file of the current status of the results:
+
+\begin{itemize}
+\item \verb+cd WORK_OUT+ 
+\item \verb+sbatch -p nehalem analysis_script.sh+
+\item When the job is done check the latest pdf-file in
+\verb+WORK_OUT/ANALYSIS/REPORT/+
+\end{itemize}
+
+For ekman:
+
+Transfer your results to the appropriate \verb+cd WORK_OUT+ directory on vagn/gimle.
+Make sure to also transfer the used \verb+rca.x+ so that we can keep track on which
+exact version of RCA that was used for the simulation.
+
+Then on vagn/gimle:
+
+\begin{itemize}
+\item \verb+cd WORK_OUT+
+\item \verb+cp /home/matlab/rossby/GENERAL_RCA_ANALYSIS/analysis_script_RCA4_CORDEX.sh analysis_script.sh+
+\item \verb+sbatch -p nehalem analysis_script.sh+
+\item When the job is done check the latest pdf-file in
+\verb+WORK_OUT/ANALYSIS/REPORT/+
+\end{itemize}
+
+\end{document}

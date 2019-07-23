@@ -1,0 +1,33 @@
+set(headers 
+  config.h 
+  guess.h 
+  guessmath.h
+  outputchannel.h 
+  archive.h 
+  framework.h 
+  shell.h
+  flink.h
+  guessmain.h
+  GuessVeg.h
+  partitionedmapserializer.h
+  guessserializer.h
+  parallel.h
+  commandlinearguments.h
+  guessstring.h
+)
+
+set(source  
+  guess.cpp 
+  outputchannel.cpp 
+  archive.cpp 
+  framework.cpp 
+  shell.cpp
+  guessmain.cpp
+  partitionedmapserializer.cpp
+  guessserializer.cpp
+  parallel.cpp
+  commandlinearguments.cpp
+  guessstring.cpp
+)
+
+include(add_guess_sources)

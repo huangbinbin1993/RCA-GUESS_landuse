@@ -1,0 +1,24 @@
+&gtopo30
+	gtopo30_path='/nobackup/rossby10/sm_marku/gtopo30/'
+/
+&ecoclimap
+	ecopath='/nobackup/rossby14/sm_psamu/ECOCLIMAP/RUN/GLOBAL_001'
+/
+&ecice
+!        ecice_path='/nobackup/rossby15/rossby/boundary/ECMWF/tice/tice_ASIM/'
+        ecice_path='/nobackup/rossby15/rossby/boundary/ECMWF/INTERIM/tice_075_ASIM/'
+/
+&global_clim
+        global_clim_path='/nobackup/rossby15/rossby/boundary/ECMWF/monthly/climLL1.0_ASIM/'
+/
+&climyears
+        climyears_path='/nobackup/rossby15/sm_aulle/DATA/ecmwf/clim'
+/
+&bound
+!	bound_path='/nobackup/rossby15/rossby/boundary/ECMWF/INTERIM/ERA40_INTERIM/ma'
+	bound_path='/nobackup/rossby15/rossby/boundary/ECMWF/INTERIM/ERA40_INTERIM_075/ma'
+/
+&ghg
+!should be moved to official place	ghg_path='/nobackup/rossby15/rossby/../GHGfiles'
+	ghg_path='/nobackup/rossby15/sm_uhans/DATA/GHGfiles'
+/

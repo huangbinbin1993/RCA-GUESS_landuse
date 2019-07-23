@@ -1,0 +1,32 @@
+&gtopo30
+	gtopo30_path='/nobackup/rossby10/sm_marku/gtopo30/'
+        !gtopo30_path='/afs/pdc.kth.se/home/d/doesc/Public/data/rca4data/gtopo30/'
+/
+&ecoclimap
+	ecopath='/nobackup/rossby14/sm_psamu/ECOCLIMAP/RUN/GLOBAL_001'
+        !ecopath='/cfs/ekman/nobackup/d/doesc/ECOCLIMAP/RUN/GLOBAL_001'
+/
+&lake
+        !lake_path='/afs/pdc.kth.se/home/d/doesc/Public/data/rca4data/res/'
+        lake_path='/nobackup/rossby4/sm_psamu/LAKE_DATA_BASE/full_lake2_eco/res/'
+/
+&ecice
+        ecice_path='/nobackup/rossby15/sm_aulle/DATA/ecmwf/tice_ASIM/'
+        !ecice_path='/cfs/ekman/nobackup/a/aulle/DATA/TICE/'
+/
+&global_clim
+        global_clim_path='/nobackup/rossby15/sm_aulle/DATA/ecmwf/climLL1.0_ASIM/'
+        !global_clim_path='/afs/pdc.kth.se/home/d/doesc/Public/data/rca4data/climLL1.0_ASIM/'
+/
+&climyears
+        climyears_path='/nobackup/rossby15/sm_aulle/DATA/ecmwf/clim'
+        !climyears_path='/cfs/ekman/nobackup/a/aulle/DATA/clim'
+/
+&bound
+	bound_path='/nobackup/rossby13/sm_aulle/monolith/sm_aulle/ERA40_INTERIM/ma'
+        !bound_path='/cfs/ekman/nobackup/a/aulle/DATA/ERA40/ma'
+/
+&ghg
+!should be moved to official place	ghg_path='/nobackup/rossby15/rossby/../GHGfiles'
+	ghg_path='/nobackup/rossby15/sm_uhans/DATA/GHGfiles'
+/

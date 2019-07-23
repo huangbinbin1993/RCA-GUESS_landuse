@@ -1,0 +1,343 @@
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{figure}[!tbp]
+\centerline{
+ \includegraphics[width=8cm, trim=140 330 140 270]{figures/soil_moisture_RCA35.prn}}
+\caption{Principal sketch of the soil moisture layers.}
+\label{soilmoisture}
+\end{figure}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+The modified Richards equation \ref{eq:theta} becomes
+
+%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{equation}
+\label{eq:thetab}
+\del[\theta]{t} = \del[]{z}\left( \lambda \del[\theta]{z} \right) + S(\theta,z),
+\end{equation}
+%%%%%%%%%%%%%%%%%%%%%%%%%
+
+where $S(\theta,z)$ includes also a parameterization of the hydraulic conductivity term, $\delt[\gamma]{z}$,
+in Equation \ref{eq:theta}.
+
+\subsubsection{The hydraulic diffusivity term}
+
+Considering the vertical discretitation of layers as shown in Figure \ref{soilmoisture}
+we can rewrite Equation \ref{eq:thetab} as specified for layer 1 as
+
+%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{equation}
+\label{eq:thetac}
+\del[\theta_1]{t} = \left[ \del[]{z}\left( \lambda \del[\theta]{z} \right) \right]_1 + S(\theta_1,z_{\theta 1}) =
+\frac{1}{z_{\theta 1}} \left( \lambda_{12} \left[\del[\theta]{z}\right]_{12} - 0 \right) + S(\theta_1,z_{\theta 1}).
+\end{equation}
+%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Here
+
+%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{equation}
+\label{eq:dthetadz}
+\left[\del[\theta]{z}\right]_{12} = \frac{2(\theta_2-\theta_1)}{z_{\theta 1}+z_{\theta 2}}
+\end{equation}
+%%%%%%%%%%%%%%%%%%%%%%%%%
+
+and the hydraulic diffusivity at the boundary between layer 1 and 2, $\lambda_{12}$, is defined as
+
+%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{equation}
+\label{eq:lambda12a}
+\frac{(z_{\theta 1}+z_{\theta 2})/2}{\lambda_{12}} = \frac{z_{\theta 1}/2}{\lambda_1} + \frac{z_{\theta 2}/2}{\lambda_2}.
+\end{equation}
+%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Solving for $\lambda_{12}$ gives
+
+%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{equation}
+\label{eq:lambda12b}
+\lambda_{12} = \frac{\lambda_1 \lambda_2 (z_{\theta 1}+z_{\theta 2})}{\lambda_1 z_{\theta 2} + \lambda_2 z_{\theta 1}}.
+\end{equation}
+%%%%%%%%%%%%%%%%%%%%%%%%%
+
+The equations for the three layers for the first term on the RHS of Equation \ref{eq:thetac} become
+
+%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{equation}
+\label{eq:hyddiffa}
+\left\{
+\begin{array}{l}
+\left[ \del[]{z}\left( \lambda \del[\theta]{z} \right) \right]_1 = \frac{1}{z_{\theta 1}} \left( \lambda_{12} \left[\del[\theta]{z}\right]_{12} - 0 \right) \\
+\left[ \del[]{z}\left( \lambda \del[\theta]{z} \right) \right]_2 = \frac{1}{z_{\theta 2}} \left( \lambda_{23} \left[\del[\theta]{z}\right]_{23} - \lambda_{12} \left[\del[\theta]{z}\right]_{12} \right) \\
+\left[ \del[]{z}\left( \lambda \del[\theta]{z} \right) \right]_3 = \frac{1}{z_{\theta 3}} \left( 0 - \lambda_{23} \left[\del[\theta]{z}\right]_{23} \right) \\
+\end{array}
+\right.
+\end{equation}
+%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Using the relationships in Equations \ref{eq:dthetadz} and \ref{eq:lambda12b} give
+
+%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{equation}
+\label{eq:hyddiffb}
+\left\{
+\begin{array}{l}
+\left[ \del[]{z}\left( \lambda \del[\theta]{z} \right) \right]_1 =
+\frac{2 \lambda_1 \lambda_2}{z_{\theta 1}(\lambda_1 z_{\theta 2} + \lambda_2 z_{\theta 1})} (\theta_2 - \theta_1) =
+\frac{\Lambda_{12}}{z_{\theta 1}}(\theta_2 - \theta_1), \\
+\left[ \del[]{z}\left( \lambda \del[\theta]{z} \right) \right]_2 =
+\frac{1}{z_{\theta 2}} \left(  \frac{2 \lambda_2 \lambda_3}{\lambda_2 z_{\theta 3} + \lambda_3 z_{\theta 2}} (\theta_3 - \theta_2) - \frac{2 \lambda_1 \lambda_2}{\lambda_1 z_{\theta 2} + \lambda_2 z_{\theta 1}} (\theta_2 - \theta_1) \right) =
+\frac{\Lambda_{23}}{z_{\theta 2}}(\theta_3 - \theta_2) - \frac{\Lambda_{12}}{z_{\theta 2}}(\theta_2 - \theta_1), \\
+\left[ \del[]{z}\left( \lambda \del[\theta]{z} \right) \right]_3 =
+-\frac{2 \lambda_2 \lambda_3}{z_{\theta 3}(\lambda_2 z_{\theta 3} + \lambda_3 z_{\theta 2})} (\theta_3 - \theta_2) =
+-\frac{\Lambda_{23}}{z_{\theta 3}}(\theta_3 - \theta_2).
+\end{array}
+\right.
+\end{equation}
+%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\subsubsection{The source/sink term}
+
+The source/sink term for the three layers, respectively, becomes
+
+%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{equation}
+\label{eq:Sterm}
+\left\{
+\begin{array}{l}
+S(\theta_1,z_{\theta 1}) = S^w(z_0) - S^e(\theta_1,z_0) - S^{re}(\theta_1,z_{\theta 1}) -  S^{dr}(\theta_1,z_{\theta 1}) - S^{srf}(z_{\theta 1}), \\
+S(\theta_2,z_{\theta 2}) = S^{dr}(\theta_1,z_{\theta 1}) - S^{re}(\theta_2,z_{\theta 2}) -  S^{dr}(\theta_2,z_{\theta 2}), \\
+S(\theta_3,z_{\theta 3}) = S^{dr}(\theta_2,z_{\theta 2}) - S^{re}(\theta_3,z_{\theta 3}) -  (1-A_{wet}) S^{dr}(\theta_3,z_{\theta 3}), \\
+\end{array}
+\right.
+\end{equation}
+%%%%%%%%%%%%%%%%%%%%%%%%%
+
+where the different terms represent, respectively, supply of water at the soil surface, $S^w(z_0)$, evaporation/condensation at the soil surface, $S^e(\theta,z_0)$,
+loss due to root extraction, $S^{re}(\theta,z_d)$, and drainage/runoff, $S^{dr}(\theta,z_d)$, at each soil
+layer/interface $z_d$.
+For wetland conditions a surface runoff, as a residual term, is introduced, $S^{srf}(z_{\theta 1})$.
+The deep runoff, $S^{dr}(\theta_3,z_{\theta 3})$, is reduced as a function of the fraction of wetland, $A_{wet}$, where the wetland fraction
+in this example can represent values in the range 0--100\%.
+
+For open land and forest, respectively, $S^w(z_0)$ is defined as
+
+%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{equation}
+\label{eq:Sw}
+\left\{
+\begin{array}{l}
+S^w(z_0)_{opl} = zrsfl*zfrop/(zfrop+zsnw)*(zrainop-zfzbr+zmelbs)+zsn2sw/(1-zcw) \\
+S^w(z_0)_{for} = zrsfl*(1.-zfrsnfor)*(zrainf-zfzbrc+zmelbsc)+zsnc2sw*zcwinv \\
+\end{array}
+\right.
+\end{equation}
+%%%%%%%%%%%%%%%%%%%%%%%%%
+ 
+The drainage/runoff terms, given by Equation \ref{eq:Sdr}, become
+
+%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{equation}
+\label{eq:Sdr123}
+\left\{
+\begin{array}{l}
+S^{dr}(\theta_1,z_{\theta 1}) = S^w(z_0) \left( \frac{\theta_1 - \theta_{wi}}{\theta_{fc} - \theta_{wi}} \right)^\beta \\
+S^{dr}(\theta_2,z_{\theta 2}) = S^{dr}(\theta_1,z_{\theta 1}) \left( \frac{\theta_2 - \theta_{wi}}{\theta_{fc} - \theta_{wi}} \right)^\beta =
+S^w(z_0) \left( \frac{\theta_1 - \theta_{wi}}{\theta_{fc} - \theta_{wi}} \right)^\beta  \left( \frac{\theta_2 - \theta_{wi}}{\theta_{fc} - \theta_{wi}} \right)^\beta \\
+S^{dr}(\theta_3,z_{\theta 3}) = (1-A_{wet}) S^{dr}(\theta_2,z_{\theta 2}) \left( \frac{\theta_3 - \theta_{wi}}{\theta_{fc} - \theta_{wi}} \right)^\beta =
+(1-A_{wet}) S^{dr}(\theta_1,z_{\theta 1}) \left( \frac{\theta_2 - \theta_{wi}}{\theta_{fc} - \theta_{wi}} \right)^\beta \left( \frac{\theta_3 - \theta_{wi}}{\theta_{fc} - \theta_{wi}} \right)^\beta \\
+\end{array}
+\right.
+\end{equation}
+%%%%%%%%%%%%%%%%%%%%%%%%%
+ 
+\subsubsection{The numerical solution}
+
+The numerical solution of Richards Equation \ref{eq:thetab}, using
+the implicit method of \cite{kn:Richtmeyer67} where the degree of implicity is
+given by the factor $\alpha$, for a specific depth $d$ becomes
+
+%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{equation}
+\label{eq:numrichards}
+\frac{\theta^{\tau +1}_d - \theta^{\tau}_d}{\Delta t} = (1-\alpha) \phi^\tau_d + \alpha \phi^{\tau+1}_d,
+\end{equation}
+%%%%%%%%%%%%%%%%%%%%%%%%%
+
+where
+
+%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{equation}
+\label{eq:phimoist}
+\phi_d = \left[ \del[]{z}\left( \lambda \del[\theta]{z} \right) \right]_d + S(\theta_d,z_{\theta d}).
+\end{equation}
+%%%%%%%%%%%%%%%%%%%%%%%%%
+
+The implicit term $\phi^{\tau+1}_d$ is defined as
+
+%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{equation}
+\label{eq:phitau1}
+\phi^{\tau+1}_d = \phi^\tau_d + \del[\phi_d]{\theta_{d-1}} (\theta^{\tau+1}_{d-1} - \theta^\tau_{d-1}) +
+ \del[\phi_d]{\theta_{d}} (\theta^{\tau+1}_{d} - \theta^\tau_{d}) +
+ \del[\phi_d]{\theta_{d+1}} (\theta^{\tau+1}_{d+1} - \theta^\tau_{d+1})
+\end{equation}
+%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Using this expression in Equation \ref{eq:numrichards} gives
+
+%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{equation}
+\label{eq:numrichards2}
+\frac{\theta^{\tau +1}_d - \theta^{\tau}_d}{\Delta t} =
+\phi^\tau_d + \alpha \left[  \del[\phi_d]{\theta_{d-1}} (\theta^{\tau+1}_{d-1} - \theta^\tau_{d-1}) +
+ \del[\phi_d]{\theta_{d}} (\theta^{\tau+1}_{d} - \theta^\tau_{d}) +
+ \del[\phi_d]{\theta_{d+1}} (\theta^{\tau+1}_{d+1} - \theta^\tau_{d+1}) \right].
+\end{equation}
+%%%%%%%%%%%%%%%%%%%%%%%%%
+
+The $\phi$-equations become
+
+%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{equation}
+\label{eq:phi1}
+\left\{
+\begin{array}{l}
+\phi_1 = \Frac{\Lambda_{12}}{z_{\theta 1}} (\theta_2 - \theta_1) +
+S^w(z_0) - S^e(\theta_1,z_0) - S^{re}(\theta_1,z_{\theta 1}) -  S^{dr}(\theta_1,z_{\theta 1}), \\
+\phi_2 = \Frac{\Lambda_{23}}{z_{\theta 2}} (\theta_3 - \theta_2) - \Frac{\Lambda_{12}}{z_{\theta 2}} (\theta_2 - \theta_1) +
+S^{dr}(\theta_1,z_{\theta 1})-S^{dr}(\theta_2,z_{\theta 2}) - S^{re}(\theta_2,z_{\theta 2}) \\
+\phi_3 = - \Frac{\Lambda_{23}}{z_{\theta 3}} (\theta_3 - \theta_2) +
+ S^{dr}(\theta_2,z_{\theta 2}) - (1-A_{wet}) S^{dr}(\theta_3,z_{\theta 3}) - S^{re}(\theta_3,z_{\theta 3}), \\
+\end{array}
+\right.
+\end{equation}
+%%%%%%%%%%%%%%%%%%%%%%%%%
+
+where the terms $S^e(\theta_1,z_0)$ and $S^{re}(\theta_1,z_{\theta 1})$ are given from Equations
+\ref{eq:Eopls} and \ref{eq:Eoplv}, respectively, using open land as an example
+
+%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{equation}
+\label{eq:dphidtheta}
+\left\{
+\begin{array}{l}
+S^e(\theta_1,z_0) = \frac{1}{L_e \rho_w} E_{opls} \\
+S^{re}(\theta_1,z_{\theta 1}) = \frac{1}{L_e \rho_w} E_{oplv}. \\
+\end{array}
+\right.
+\end{equation}
+%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Note that we have omitted the surface runoff term related to wetlands, $S^{srf}(z_{\theta 1})$ introduced in Equation \ref{eq:Sterm}, since it will be
+considered as a residual term in the end.
+
+Using the expressions in Equations \ref{eq:Sdr123} in Equations \ref{eq:phi1} give
+
+%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{equation}
+\label{eq:phi2}
+\left\{
+\begin{array}{l}
+\phi_1 = \Frac{\Lambda_{12}}{z_{\theta 1}} (\theta_2 - \theta_1) +
+S^w(z_0) \left( 1 - \left( \frac{\theta_1 - \theta_{wi}}{\theta_{fc} - \theta_{wi}} \right)^\beta \right)
+- S^e(\theta_1,z_0) - S^{re}(\theta_1,z_{\theta 1}), \\
+\phi_2 = \Frac{\Lambda_{23}}{z_{\theta 2}} (\theta_3 - \theta_2) - \Frac{\Lambda_{12}}{z_{\theta 2}} (\theta_2 - \theta_1) +
+S^w(z_0) \left( \frac{\theta_1 - \theta_{wi}}{\theta_{fc} - \theta_{wi}} \right)^\beta
+\left( 1 - \left( \frac{\theta_2 - \theta_{wi}}{\theta_{fc} - \theta_{wi}} \right)^\beta \right)
+- S^{re}(\theta_2,z_{\theta 2}) \\
+\phi_3 = - \Frac{\Lambda_{23}}{z_{\theta 3}} (\theta_3 - \theta_2) +
+S^{dr}(\theta_1,z_{\theta 1}) \left( \frac{\theta_2 - \theta_{wi}}{\theta_{fc} - \theta_{wi}} \right)^\beta
+\left( 1 - \left( \frac{\theta_3 - \theta_{wi}}{\theta_{fc} - \theta_{wi}} \right)^\beta \right)
+- S^{re}(\theta_3,z_{\theta 3}), \\
+\end{array}
+\right.
+\end{equation}
+%%%%%%%%%%%%%%%%%%%%%%%%%
+
+For an implicit solution we need the derivatives of the terms in Equation \ref{eq:phi2} with respect to $\theta$.
+The fast-response terms are those connected to drainage. Thus, we apply a semi-implicit solution only considering
+the derivatives of the drainage terms. We also assume $\beta=2$.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{equation}
+\label{eq:dphidtheta}
+\left\{
+\begin{array}{l}
+\del[\phi_1]{\theta_{1}} = - S^w(z_0) \frac{2}{(\theta_{fc}-\theta_{wi})^2} (\theta_1 - \theta_{wi}) \\
+\del[\phi_2]{\theta_{1}} = S^w(z_0) \left( 1 - \left( \frac{\theta_2 - \theta_{wi}}{\theta_{fc} - \theta_{wi}} \right)^\beta \right)
+\frac{2}{(\theta_{fc}-\theta_{wi})^2} (\theta_1 - \theta_{wi}) \\
+\del[\phi_2]{\theta_{2}} = - S^w(z_0) \left( \frac{\theta_1 - \theta_{wi}}{\theta_{fc} - \theta_{wi}} \right)^\beta
+\frac{2}{(\theta_{fc}-\theta_{wi})^2} (\theta_2 - \theta_{wi}) \\
+\del[\phi_3]{\theta_{2}} = S^{dr}(z_{\theta_1,\theta 1}) \left( 1 - \left( \frac{\theta_3 - \theta_{wi}}{\theta_{fc} - \theta_{wi}} \right)^\beta \right)
+\frac{2}{(\theta_{fc}-\theta_{wi})^2} (\theta_2 - \theta_{wi}) \\
+\del[\phi_3]{\theta_{3}} = - S^{dr}(z_{\theta_1,\theta 1}) \left( \frac{\theta_2 - \theta_{wi}}{\theta_{fc} - \theta_{wi}} \right)^\beta
+\frac{2}{(\theta_{fc}-\theta_{wi})^2} (\theta_3 - \theta_{wi}) \\
+\end{array}
+\right.
+\end{equation}
+%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Putting these expressions into Equation \ref{eq:numrichards2} gives
+
+%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{equation}
+\label{eq:phitau1all}
+\left\{
+\begin{array}{ll}
+\theta^{\tau +1}_1 = & \theta^{\tau}_1 + \Delta t \left\{ \phi_1^\tau + \alpha \left[ \del[\phi_1]{\theta_{1}} (\theta_1^{\tau+1} - \theta_1^\tau) \right] \right\} \\
+\theta^{\tau +1}_2 = & \theta^{\tau}_2 + \Delta t \left\{ \phi_2^\tau + \alpha \left[ \del[\phi_2]{\theta_{1}} (\theta_1^{\tau+1} - \theta_1^\tau)+
+\del[\phi_2]{\theta_{2}} (\theta_2^{\tau+1} - \theta_2^\tau) \right] \right\} \\
+\theta^{\tau +1}_3 = & \theta^{\tau}_3 + \Delta t \left\{ \phi_3^\tau + \alpha \left[ \del[\phi_3]{\theta_{2}} (\theta_2^{\tau+1} - \theta_2^\tau)+
+\del[\phi_3]{\theta_{3}} (\theta_3^{\tau+1} - \theta_3^\tau) \right] \right\} \\
+\end{array}
+\right.
+\end{equation}
+%%%%%%%%%%%%%%%%%%%%%%%%%
+
+The implicit solution is given by $A\mathbf{\theta^{\tau+1}}=\mathbf{b}$ where
+
+%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{equation}
+\label{eq:thetavect}
+\mathbf{\theta^{\tau+1}}=\left[
+\begin{array}{l}
+\theta_1^{\tau+1} \\
+\theta_2^{\tau+1} \\
+\theta_3^{\tau+1} \\
+\end{array}
+\right],
+\end{equation}
+%%%%%%%%%%%%%%%%%%%%%%%%%
+
+and the 3x3 matrix $A$ is
+
+%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{equation}
+\label{eq:Amatrix}
+A=\left[
+\begin{array}{ccc}
+1-\alpha\Delta t \del[\phi_1]{\theta_{1}}	& 0						& 0 \\
+-\alpha\Delta t \del[\phi_2]{\theta_{1}}	& 1-\alpha\Delta t \del[\phi_2]{\theta_{2}}	& 0 \\
+0						& -\alpha\Delta t \del[\phi_3]{\theta_{2}}	& 1-\alpha\Delta t \del[\phi_3]{\theta_{3}} \\
+\end{array}
+\right],
+\end{equation}
+%%%%%%%%%%%%%%%%%%%%%%%%%
+
+and the vector $\mathbf{b}$ is
+
+%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{equation}
+\label{eq:bvect}
+\mathbf{b}=\left[
+\begin{array}{c}
+\theta_1^{\tau} + \Delta t \left\{ \phi_1^\tau - \alpha \del[\phi_1]{\theta_{1}} \theta_1^\tau \right\} \\
+\theta_2^{\tau} + \Delta t \left\{ \phi_2^\tau - \alpha \left[ \del[\phi_2]{\theta_{1}} \theta_1^\tau + \del[\phi_2]{\theta_{2}} \theta_2^\tau \right] \right\} \\
+\theta_3^{\tau} + \Delta t \left\{ \phi_3^\tau - \alpha \left[ \del[\phi_3]{\theta_{2}} \theta_2^\tau + \del[\phi_3]{\theta_{3}} \theta_3^\tau \right] \right\} \\
+\end{array}
+\right].
+\end{equation}
+%%%%%%%%%%%%%%%%%%%%%%%%%
+

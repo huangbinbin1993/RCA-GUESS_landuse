@@ -1,0 +1,44 @@
+OPT := -O0
+DBG := -g
+
+MPIPATH := /home/kupiainen/CODE/utils/MPICH2/intel10.1.018
+MPIINCLUDES := -I$(MPIPATH)/include
+MPILIBS     := -L$(MPIPATH)/lib -lmpich -lmpifmpich -lpthread
+
+CC      := icc 
+CCFLAGS := -I/opt/intel/cc/10.1.018/include  $(OPT) $(DBG) $(DEFINITIONS) $(MPIINCLUDES)
+CXX     := icc 
+CXXFLAGS := $(OPT) $(DBG) $(DEFINITIONS) $(MPIINCLUDES) -I/opt/intel/cc/10.1.018/include
+
+FC := ifort
+FDBG := $(DBG)
+FHACKS :=  -mp
+FINCLUDE := -I$(ROOTDIR)/$(ARCH)/rcamod  -I$(ROOTDIR)/include/
+FCFLAGS := $(OPT) $(FDBG) $(FHACKS) $(DEFINITIONS) $(MPIINCLUDES) $(FINCLUDE) 
+
+# xlf (IBM/AIX), ifort (Intel/Linux) (and others) always produce
+# a lower-case module name
+
+MODNAME = $(shell echo $(*F) | tr "[:upper:]" "[:lower:]")
+MODEXT := mod
+
+LD          := $(FC)
+LD_MPP      := $(FC) -L /usr/lib/gcc/i486-linux-gnu/4.4.3 -lstdc++ -L$(MPIPATH)/lib -lmpi
+
+LDFLAGS     := -traceback -lsvml -lirc
+
+LDFLAGS_VAR := $(LDFLAGS) $(MPILIBS) $(LAPACKLIBS) $(FFTLIBS)
+LDFLAGS_CMA := $(LDFLAGS) $(MPILIBS) $(LAPACKLIBS)
+LDFLAGS_HIR := $(LDFLAGS) $(MPILIBS) $(LAPACKLIBS) $(FFTLIBS)
+
+AR      := ar
+ARFLAGS := rv
+MV      := mv
+RM      := rm -f
+MKDIR   := mkdir
+RMDIR   := rmdir
+
+
+
+
+

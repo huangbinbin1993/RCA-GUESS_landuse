@@ -1,0 +1,3 @@
+
+g++ -o calc -I../libraries/gutil -I../libraries/fastarchive calc.cpp ../libraries/gutil/gutil.cpp ../libraries/fastarchive/fastarchive.cpp
+

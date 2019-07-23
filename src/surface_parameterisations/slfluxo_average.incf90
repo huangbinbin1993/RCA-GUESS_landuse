@@ -1,0 +1,364 @@
+subroutine slfluxo_average(nhor,nlev,kstart,kstop,                &
+     t,q,u,v,gpot,dph,                                             &
+     ps,tsea,tice,frland,frice,                                    &
+     tsnice,frsnice,                                               &
+     z0oro,z0sea,z0land,                                           &
+     senfl,latfl,evapl,                                            &
+     senfs,latfs,evaps,senfi,latfi,evapi,                          &
+     ustarl,ustars,ustari,                                         &
+     t2ml,t2ms,t2mi,t2mopsn,                                       &
+     q2ml,q2ms,q2mi,q2mopsn,                                       &
+     rh2ml,rh2ms,rh2mi,rh2mopsn,                                   &
+     u10ms,u10mi,u10opsn,                                          &
+     v10ms,v10mi,v10opsn,                                          &
+     tseff,along,coslat,kstep,                                     &
+     momf,momfu,momfv,                                             &
+     t2m,q2m,rh2m,u10m,v10m,                                       &
+     t2mopsnsi,q2mopsnsi,rh2mopsnsi,                               &
+     u10opsnsi,v10opsnsi,                                          &
+     senf,latf,evap,ustar,z0wind)                                        
+
+  use confys                                                          
+  use ctun, only:acrit                                                            
+  use comdfb                                                          
+  implicit none                                                            
+
+  integer,intent(in)::nhor,nlev,kstart,kstop
+  integer::jl                                        
+
+  real(kind=realkind),intent(in)::t(nhor,nlev),u(nhor,nlev),v(nhor,nlev),gpot(nhor,nlev),&
+       dph(nhor,nlev+1),q(nhor,nlev)                                  
+  real(kind=realkind),intent(in)::ps(nhor),frland(nhor),z0land(nhor),               &
+       senfs(nhor),latfs(nhor),evaps(nhor),ustars(nhor),             &
+       senfi(nhor),latfi(nhor),evapi(nhor),ustari(nhor),             &
+       senfl(nhor),latfl(nhor),evapl(nhor),ustarl(nhor),frice(nhor) 
+  real(kind=realkind),intent(in)::t2ml(nhor),t2ms(nhor),t2mi(nhor),t2mopsn(nhor),               &
+       q2ml(nhor),q2ms(nhor),q2mi(nhor),q2mopsn(nhor),               &
+       rh2ml(nhor),rh2ms(nhor),rh2mi(nhor),rh2mopsn(nhor),           &
+       u10ms(nhor),u10mi(nhor),u10opsn(nhor),                        &
+       v10ms(nhor),v10mi(nhor),v10opsn(nhor)                        
+
+  !!!!!!!!!INOUIT
+  real(kind=realkind),intent(inout):: t2mopsnsi(nhor),q2mopsnsi(nhor),rh2mopsnsi(nhor),      &
+       u10opsnsi(nhor),v10opsnsi(nhor)
+  real(kind=realkind),intent(in)::z0sea(nhor),tsea(nhor),tice(nhor),tsnice(nhor),frsnice(nhor)
+
+  real(kind=realkind),intent(inout)::senf(nhor),latf(nhor),evap(nhor),momf(nhor),momfu(nhor),momfv(nhor),ustar(nhor),tseff(nhor)
+  real(kind=realkind),intent(inout)::z0wind(nhor),t2m(nhor),q2m(nhor),rh2m(nhor),u10m(nhor),v10m(nhor)
+
+       
+
+  integer::kstep                                                      
+  real(kind=realkind),intent(in)::along(nhor),coslat(nhor)                                          
+
+  real(kind=realkind) zsecu,zlb,z2m,z10m,zrkar,zm,zsl1,zsl11,zslask,zdup2,          &
+       zueps,zvel,zdens,zlnrou,zrous,zu10,zv10,zx10,zln10,           &
+       zln10k,zl10,zust,zvst,zustar,zunson,zunsoff,zpar,zmoin,       &
+       ztotf,zuneg,zupos,zunlev,zvneg,zvpos,zvnlev,zrougl,zlat,      &
+       zrpi4,ztsea,z0ice,ztam,zhm,zl2lim ,zln2,zln2k,zq,zl2,         &
+       zthst,zqstar,zq2m,zt2m,zy,zy2,zqseff,zepcr,ztsi,zqsi,         &
+       zroussea,zroumin                                                    
+
+  real(kind=realkind) zfr,zfrsum,zfrlim,ztdumout                                          
+
+  real(kind=realkind) zqlim,zqb,zslaskmom,z01mom,z02mom,zcneutmom,zqam,             &
+       zvirnl,z03,zriq,zri,zstaon,zstaoff,zria,zdr,zcdrag,           &
+       zfmx,zcams3,zcons1,zqc,zqd,zhnlev,zcrdq                        
+  real(kind=realkind) z0oro(nhor)                                                         
+!cgjz0oro
+  real zwrk1,zwrk2,zwrk3,zwrk4,zwrk5,zwrk6
+!cgjz0oro
+
+  real(kind=realkind) wrous(5)                                                       
+  real(kind=realkind) zalon,zalat                                                         
+     !    constants                                                           
+     zsecu=1.E-7_realkind                                                         
+     zueps=0.1_realkind                                                          
+     zlb=10._realkind                                                            
+     z2m=2._realkind                                                              
+     z10m=10._realkind                                                            
+     zrkar=1._realkind/carman                                                     
+     zm=4._realkind*zrkar                                                         
+     zhm=zm                                                              
+     zq=zm                                                               
+     zrpi4=pi/4._realkind                                                         
+     zsl1=2._realkind*rair*gravit*carman/cpair                                    
+     zsl11=0.61_realkind*cpair                                                    
+     zl2lim=-4.0_realkind                                                         
+     zroumin=5.E-5_realkind                                                       
+     zepcr=acrit*epsilo                                                  
+     zqlim=0.0001_realkind                                                        
+     zqb=5._realkind                                                              
+     zqd=5._realkind                                                              
+     zqc=5._realkind                                                              
+     zcons1=ccpq*cpair                                                   
+     zcams3=3._realkind*zqb*zqc*carman**2_realkind                                         
+     zcrdq=1._realkind/epsilo-1._realkind                                                  
+     zfrlim=0.01_realkind                                                         
+     ztdumout=99._realkind                                                             
+
+     wrous(1)=-999._realkind                                                      
+     wrous(2)=3.e-2_realkind                                                     
+     wrous(3)=0.50_realkind                                                       
+     wrous(4)=0.013_realkind                                                      
+     wrous(5)=1.0_realkind                                                             
+
+     z0ice=wrous(2)                                                           
+
+     !    Initialize arrays and recompute tseff                               
+     do 10 jl=kstart,kstop                                               
+        senf(jl)=0._realkind                                                      
+        latf(jl)=0._realkind                                                      
+        evap(jl)=0._realkind                                                      
+        momf(jl)=0._realkind                                                      
+        momfu(jl)=0._realkind                                                     
+        momfv(jl)=0._realkind                                                     
+        ustar(jl)=0._realkind                                                          
+
+        !tseff is mean over land area, from slfluxo_land, 
+        !recompute to get grid average
+
+        ztsea= (1._realkind-frice(jl))*tsea(jl) +                                &
+             frice(jl)*( tice(jl)*(1._realkind-frsnice(jl))+                     &
+             tsnice(jl)*frsnice(jl))                                     
+        tseff(jl)=frland(jl)*tseff(jl)+(1._realkind-frland(jl))*ztsea                  
+
+10   enddo
+
+
+     !    Average grid square computations                                    
+     do 50 jl=kstart,kstop                                               
+        !    5.1 Surface momentum fluxes for use in the vertical diffusion.      
+        zhnlev=gpot(jl,nlev)/gravit                                      
+        zalat=acos(coslat(jl))*180._realkind/pi                                   
+        zalon=along(jl)                                                  
+        zdup2=max( u(jl,nlev)**2_realkind + v(jl,nlev)**2_realkind,zueps )                 
+        zvel=sqrt(zdup2)                                                 
+        zdens=dph(jl,nlev+1)/gpot(jl,nlev)                                    
+
+        !    Compute grid average  ustar(jl) squared                             
+        !    = grid average kinematic surface stress.                            
+        zustar=frland(jl)*ustarl(jl)*ustarl(jl)+                        &
+             (1._realkind-frland(jl))*                                           &
+             (    (1._realkind-frice(jl))*ustars(jl)*ustars(jl) +                &
+             frice(jl)*ustari(jl)*ustari(jl)   )                              
+
+        zustar = sqrt(zustar)                                            
+        !    Compute senf,latf,t2m,q2m for the whole gridsquare.                 
+        senf(jl)=frland(jl)*senfl(jl) +                                 &
+             (1._realkind -frland(jl))*                                          &
+             ( (1._realkind-frice(jl))*senfs(jl)+frice(jl)*senfi(jl) )                 
+
+        latf(jl)=frland(jl)*latfl(jl)                                   &
+             + (1._realkind -frland(jl))*                                        &
+             ( (1._realkind-frice(jl))*latfs(jl)+frice(jl)*latfi(jl) )                 
+
+        evap(jl)=frland(jl)*evapl(jl)                                   &
+             + (1._realkind -frland(jl))*                                        &
+             ( (1._realkind-frice(jl))*evaps(jl)+frice(jl)*evapi(jl) )                 
+
+        !    5.3 compute grid average value of z0 for momentum   
+        zroussea=max(z0sea(jl),zroumin)                                       
+
+        zlnrou=frland(jl)/(log(zlb/z0land(jl)))**2 +                   &
+             (1._realkind-frland(jl))*                                           &
+             ( (1._realkind-frice(jl))/(log(zlb/zroussea))**2 +                 &
+             frice(jl)/(log(zlb/z0ice))**2  )                                
+
+        zrougl=zlb*exp(max(-89._realkind,-sqrt(1._realkind/zlnrou)))
+        z0wind(jl)=zrougl                                                     
+
+        !    5.4 Compute 10 m winds, t2m and q2m based on the area averaged      
+        !    surface parameters including heat roughness.                    
+        !    wind components must not be zero.                   
+        if( u(jl,nlev)<0.0_realkind ) then                                     
+           zuneg=1.0_realkind                                                    
+           zupos=0.0_realkind                                                     
+        else                                                             
+           zuneg=0.0_realkind                                                     
+           zupos=1.0_realkind                                                     
+        endif
+
+        zunlev=zuneg*min(u(jl,nlev),-zueps)+                            &
+             zupos*max(u(jl,nlev),zueps)                                      
+
+        if( v(jl,nlev)<0.0_realkind ) then                                     
+           zvneg=1.0_realkind                                                     
+           zvpos=0.0_realkind                                                     
+        else                                                             
+           zvneg=0.0_realkind                                                     
+           zvpos=1.0_realkind                                                     
+        endif
+
+        zvnlev=zvneg*min(v(jl,nlev),-zueps)+                            &
+             zvpos*max(v(jl,nlev),zueps)                                      
+
+
+        zlat = latvap+latice*(0.5_realkind-sign(0.5_realkind,tseff(jl)-tmelt))             
+        zustar=max(zustar,0.03_realkind)                                               
+
+        ztotf=senf(jl) +zsl11*t(jl,nlev)*latf(jl)/zlat                   
+        zmoin=zsl1*ztotf/( 2._realkind*(ps(jl)-dph(jl,nlev+1))*zustar**3 )             
+
+        !    Compute ustar and vstar                             
+        zust=zustar*zunlev/zvel                                          
+        zvst=zustar*zvnlev/zvel                                               
+
+        !    stable case zunson=0, unstable zunson=1             
+        if( ztotf<0.0_realkind ) then                                          
+           zunson=1.0_realkind                                                   
+           zunsoff=0.0_realkind                                                   
+        else                                                             
+           zunson=0.0_realkind                                                    
+           zunsoff=1.0_realkind                                                   
+        endif
+
+        !    Compute grid averaged t2m and q2m                   
+        t2m(jl)=0._realkind                                                       
+        q2m(jl)=0._realkind                                                       
+        rh2m(jl)=0._realkind                                                      
+        zfrsum=0._realkind                                                        
+        zfr=frland(jl)                                                   
+        if(zfr>zfrlim)then                                            
+           t2m(jl)=t2m(jl)+zfr*t2ml(jl)                                  
+           q2m(jl)=q2m(jl)+zfr*q2ml(jl)                                  
+           rh2m(jl)=rh2m(jl)+zfr*rh2ml(jl)                               
+           zfrsum=zfrsum+zfr                                             
+        endif
+        zfr=(1._realkind-frland(jl))*(1._realkind-frice(jl))                               
+        if(zfr>zfrlim)then                                            
+           t2m(jl)=t2m(jl)+zfr*t2ms(jl)                                  
+           q2m(jl)=q2m(jl)+zfr*q2ms(jl)                                  
+           rh2m(jl)=rh2m(jl)+zfr*rh2ms(jl)                               
+           zfrsum=zfrsum+zfr                                             
+        endif
+        zfr=(1._realkind-frland(jl))*frice(jl)                                    
+        if(zfr>zfrlim)then                                            
+           t2m(jl)=t2m(jl)+zfr*t2mi(jl)                                  
+           q2m(jl)=q2m(jl)+zfr*q2mi(jl)                                  
+           rh2m(jl)=rh2m(jl)+zfr*rh2mi(jl)                               
+           zfrsum=zfrsum+zfr                                             
+        endif
+        t2m(jl)=t2m(jl)/zfrsum                                           
+        q2m(jl)=q2m(jl)/zfrsum                                           
+        rh2m(jl)=rh2m(jl)/zfrsum                                              
+
+        t2mopsnsi(jl)=0._realkind                                                 
+        q2mopsnsi(jl)=0._realkind                                                 
+        rh2mopsnsi(jl)=0._realkind                                                
+        u10opsnsi(jl)=0._realkind                                                 
+        v10opsnsi(jl)=0._realkind                                                 
+        zfrsum=0._realkind                                                        
+        if(abs(t2mopsn(jl)-ztdumout)<1.e-14_realkind)then                                  
+           zfr=(1._realkind-frland(jl))*(1._realkind-frice(jl))                            
+           if(zfr>zfrlim)then                                         
+              t2mopsnsi(jl)=t2mopsnsi(jl)+zfr*t2ms(jl)                   
+              q2mopsnsi(jl)=q2mopsnsi(jl)+zfr*q2ms(jl)                   
+              rh2mopsnsi(jl)=rh2mopsnsi(jl)+zfr*rh2ms(jl)                
+              u10opsnsi(jl)=u10opsnsi(jl)+zfr*u10ms(jl)                  
+              v10opsnsi(jl)=v10opsnsi(jl)+zfr*v10ms(jl)                  
+              zfrsum=zfrsum+zfr                                          
+           endif
+           zfr=(1._realkind-frland(jl))*frice(jl)                                 
+           if(zfr>zfrlim)then                                         
+              t2mopsnsi(jl)=t2mopsnsi(jl)+zfr*t2mi(jl)                   
+              q2mopsnsi(jl)=q2mopsnsi(jl)+zfr*q2mi(jl)                   
+              rh2mopsnsi(jl)=rh2mopsnsi(jl)+zfr*rh2mi(jl)                
+              u10opsnsi(jl)=u10opsnsi(jl)+zfr*u10mi(jl)                  
+              v10opsnsi(jl)=v10opsnsi(jl)+zfr*v10mi(jl)                  
+              zfrsum=zfrsum+zfr                                          
+           endif
+           t2mopsnsi(jl)=t2mopsnsi(jl)/zfrsum                            
+           q2mopsnsi(jl)=q2mopsnsi(jl)/zfrsum                            
+           rh2mopsnsi(jl)=rh2mopsnsi(jl)/zfrsum                          
+           u10opsnsi(jl)=u10opsnsi(jl)/zfrsum                            
+           v10opsnsi(jl)=v10opsnsi(jl)/zfrsum                            
+        else                                                             
+           t2mopsnsi(jl)=t2mopsn(jl)                                     
+           q2mopsnsi(jl)=q2mopsn(jl)                                     
+           rh2mopsnsi(jl)=rh2mopsn(jl)                                   
+           u10opsnsi(jl)=u10opsn(jl)                                     
+           v10opsnsi(jl)=v10opsn(jl)                                     
+        endif
+
+
+        zl10=z10m*zmoin                                                  
+        zln10=log(z10m/zrougl)                                          
+        zln10k=zln10*zrkar                                                    
+
+        !    zu10 etc dummy if zunson=1.0                                             
+
+        zslask=max(-89._realkind,zunson + zunsoff*(-zm*zust*zl10/zunlev))
+        zu10=zust*zln10k + zunlev*(1._realkind-exp(zslask))                       
+        zslask=max(-89._realkind,zunson + zunsoff*(-zm*zvst*zl10/zvnlev))                   
+        zv10=zvst*zln10k + zvnlev*(1._realkind-exp(zslask))                            
+
+        !    zx10 dummy if zunson=0                                                   
+
+        zx10=zunson*(1._realkind-15._realkind*zl10) + zunsoff                              
+        zx10=sqrt(sqrt(zx10))                                                 
+
+        zpar=(zln10 - (log( 0.5_realkind*(1._realkind+zx10*zx10) )+ 2._realkind*                  &
+             ( log( 0.5_realkind*(1._realkind+zx10))-atan(zx10)+zrpi4 )) )*zrkar               
+
+        u10m(jl)=zunson*zust*zpar + zunsoff*zu10                         
+        v10m(jl)=zunson*zvst*zpar + zunsoff*zv10                              
+
+        !    Compute momfu and momfv including orographic roughness                   
+
+!cgjz0oro construct a test orographic roughness length from orogsigm
+        zwrk1=max(5.0_realkind,min(1000.0_realkind,z0oro(jl)))
+        zwrk2=zwrk1/700.0_realkind
+        zwrk3=max(0.1,z0oro(jl))
+        zwrk4=zwrk2*zwrk2*sqrt(zwrk3)
+        zwrk5=max(0.01,min(100.,zwrk4))
+        zwrk6=frland(jl)*zwrk5
+        zrougl=zrougl+zwrk6                                         
+!cgjz0oro        zrougl=zrougl 		!keep as rca4 original zr0oro=0                                        
+!cgjz0oro        zrougl=zrougl+z0oro(jl)                                          
+        zslaskmom=(zrougl+zhnlev)/(zrougl)                               
+        z01mom=1._realkind/(log(zslaskmom)*log(zslaskmom))                      
+        z02mom=sqrt(zslaskmom)*z01mom                                    
+        zcneutmom=z01mom*(carman*carman)                                      
+
+        zqam=max(q(jl,nlev),zqlim)                                       
+        zvirnl=1._realkind+zcrdq*zqam                                             
+        z03=rair*clog/zdup2                                              
+        zriq =-z03*( gpot(jl,nlev)/(cpair+zcons1*zqam) +                &
+             zvirnl*t(jl,nlev) )
+        zri=zriq + z03 *( 1._realkind+zcrdq*zqam)*tseff(jl)
+
+        if( zri>0.0_realkind ) then
+           zstaon=1.0_realkind
+           zstaoff=0.0_realkind
+        else
+           zstaon=0.0_realkind
+           zstaoff=1.0_realkind
+        endif
+
+        zria=abs(zri)
+
+        !     stable richardson number > 0.
+        !     (formulae according to Louis et al,1982)
+
+        zdr=2.0_realkind*zqb*zria/sqrt(1._realkind +zqd*zria)
+        zcdrag=zcneutmom/( 1._realkind +zdr )
+
+        !     unstable richardson number
+        !     (Louis et al,1982: ecmwf)
+
+        zfmx=zqb*zria/(1._realkind+z02mom*zcams3*sqrt(zria))
+        zslask=zcneutmom*(1._realkind+3._realkind*zfmx)
+        zcdrag=zstaoff*zcneutmom*(1._realkind+2._realkind*zfmx) +zstaon*zcdrag
+        zustar=zcdrag*zdup2
+
+        momfu(jl)=zdens*zustar*u(jl,nlev)/( zvel +zsecu )
+        momfv(jl)=zdens*zustar*v(jl,nlev)/( zvel +zsecu )
+        momf(jl)=zdens*zustar
+        ustar(jl)=sqrt(zustar)
+
+
+50   enddo
+     return
+   end subroutine slfluxo_average
+

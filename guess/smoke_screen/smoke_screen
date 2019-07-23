@@ -1,0 +1,85 @@
+#!/bin/bash
+
+# Check arguments to the script
+if [[ $# != 1 ]]; then
+	echo "Usage: smoke_screen <gridlist>"
+	exit 1
+fi
+
+# The gridlist is given as the first argument
+gridlist=$1
+
+# Include the build directory in the PATH enviroment variable
+export PATH=$(pwd)/build:$PATH
+
+# Exit on error
+set -e
+
+# Set up a build directory and compile the project
+mkdir -p build
+rm -rf build/*
+cd build
+cmake -DCMAKE_BUILD_TYPE=Release ../.. 
+make clean; make -j
+cd ..
+
+# Run once with a CRU spinup
+cp cru_spinup.ins guess.ins
+rm -f sim*.out
+rm -rf sim_state_*
+physghost $gridlist 1960 2005
+
+# Generate plots and move everything to the CRU_spinup directory
+./plots 1961 1990
+mkdir -p CRU_spinup
+rm -rf CRU_spinup/*
+mv *.out CRU_spinup
+mv *.png CRU_spinup
+mv sim_state_* CRU_spinup
+
+# Create the RCA spinup archive
+cd CRU_spinup
+calc sim 1
+cd ..
+
+cp CRU_spinup/RCAData.bin .
+cp CRU_spinup/RCAData.h ../cru/guessio
+
+# Rebuild so we can read in the RCA spinup archive
+cd build
+make clean; make -j
+cd ..
+
+# Run again with an RCA spinup
+cp rca_spinup.ins guess.ins
+
+physghost $gridlist 1960 2005
+
+# Save the results in RCA_first_run
+mkdir -p RCA_first_run
+rm -rf RCA_first_run/*
+mv *.out RCA_first_run
+# Get all the state directories out of the way...
+mv sim_state_* RCA_first_run
+# Except the one for 1960
+mv RCA_first_run/sim_state_1960 .
+
+# Run the same again, this time to test restart
+physghost $gridlist 1960 2005
+mkdir -p RCA_spinup
+rm -rf RCA_spinup/*
+
+# Combine out files from first run and restart
+start_year=$(awk 'NR==2 {print $4}' sim_cmass_0.out)
+for file in *.out ; do
+	# Should skip binary files...
+	./combine_guess_outfiles RCA_first_run/$file $file $start_year RCA_spinup/$file
+done
+
+# Clean up a bit
+rm *.out
+
+# Create plots for the combined run with RCA spinup and restart
+cd RCA_spinup
+../plots 1961 1990
+mv ../sim_state_* .

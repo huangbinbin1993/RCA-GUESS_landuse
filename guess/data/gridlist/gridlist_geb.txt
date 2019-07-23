@@ -1,0 +1,11 @@
+20.0	67.5	NW Lapland - boreal forest
+30.0	65.0	N Karelia - boreal forest
+-3.0	55.0	Scotland - temperate forest
+10.0	53.5	Schleswig-Holstein - temperate forest
+23.5	52.5	Bialowieza - mixed temperate forest
+2.0	48.0	N France - temperate forest
+7.0	46.0	Derborence - alpine forest
+9.0	45.5	Lombardy - temperate forest
+27.5	43.5	E Bulgaria - forest steppe
+-8.0	43.0	Galicia - mediterranean evergreen forest
+17.0	40.5	Apulia - mediterranean shrubland?

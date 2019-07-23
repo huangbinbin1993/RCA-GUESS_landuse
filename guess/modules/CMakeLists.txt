@@ -1,0 +1,36 @@
+set(headers 
+  canexch.h 
+  driver.h 
+  growth.h 
+  guessio.h 
+  soilwater.h 
+  somdynam.h 
+  vegdynam.h 
+  landcover.h 
+  bvoc.h 
+  q10.h 
+  globalco2file.h
+  landcoverstrategies.h
+  rca_driver.h
+  savestate.h
+  ncompete.h
+  )
+
+set(source  
+  canexch.cpp 
+  driver.cpp 
+  growth.cpp 
+  guessio.cpp 
+  soilwater.cpp 
+  somdynam.cpp 
+  landcover.cpp 
+  vegdynam.cpp 
+  bvoc.cpp
+  globalco2file.cpp
+  landcoverstrategies.cpp
+  rca_driver.cpp
+  savestate.cpp
+  ncompete.cpp
+  )
+
+include(add_guess_sources)

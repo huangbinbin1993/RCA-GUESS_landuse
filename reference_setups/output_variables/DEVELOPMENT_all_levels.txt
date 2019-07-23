@@ -1,0 +1,333 @@
+!
+! Sea/ice stuff
+11 102 0	sst		pp
+91 102 0	frice		pp
+92 102 0	iceth		dd
+239 102 0	lcounttice	dd
+250 105 100	tice1_i		dd
+250 105 101	tice2_i		dd
+!
+! Atmospheric water/ice
+54 105 3006	precwtr		pp
+58 105 3006	cldice		pp
+76 105 3006	cw		pp
+!
+! Clouds
+71 105 0	cov2d		qq
+73 105 0	lowcc		pp
+74 105 0	medcc		pp
+75 105 0	highcc		pp
+250 105 91	cloudbot_i	pp
+!
+! Misc atm stuff
+67 105 0	zi		qq
+!
+! Radiation components
+111 105 3006	swnetsrf	pp
+112 105 3006	lwnetsrf	pp
+113 105 3006	swnettoa	pp
+114 105 3006	lwnettoa	pp
+115 105 3006	lwdwnsrf	pp
+116 105 3006	swdwnsrf	pp
+117 105 3006	swdwntoa	pp
+240 105 4006	assh		dd
+!
+! Precipitation
+62 105 4006	lsprc		qq
+63 105 4006	convprc		qq
+!
+! Air pressure
+1 103 0		slp		qq
+!
+! T2m air temperature
+250 105 1	t2m_i		qq
+250 105 107	t2mopsnsi_i	qq
+250 105 3	t2mopsn_i	qq
+250 105 4	t2mfor_i	qq
+250 105 5	t2ms_i		qq
+250 105 6	t2mi_i		qq
+15 105 2	t2max		dd
+16 105 2	t2min		dd
+241 105 1	t2opsnmax	dd
+241 105 2	t2opsnmin	dd
+!
+! q2m/rh2m air humidity
+250 105 7	q2m_i		qq
+250 105 83	rh2_i		qq
+250 105 108	q2mopsnsi_i	qq
+250 105 109	rh2mopsnsi_i	qq
+250 105 10	q2mfor_i	qq
+250 105 11	q2ms_i		qq
+250 105 12	q2mi_i		qq
+241 105 19	rh2max		dd
+241 105 20	rh2min		dd
+!
+! 10m/gust wind speed
+250 105 13	u10_i		qq
+250 105 19	v10_i		qq
+250 105 15	u10opsn_i	qq
+250 105 17	u10ms_i		qq
+250 105 18	u10mi_i		qq
+250 105 21	v10opsn_i	qq
+250 105 23	v10ms_i		qq
+250 105 24	v10mi_i		qq
+241 105 14	U10msmax	qq
+32 105 10	U10max		qq
+241 105 18	utot10ms	qq
+241 105 21	gustest		qq
+241 105 22	gustlow		qq
+241 105 23	gustup		qq
+!
+! Surface fluxes
+242 105 31	latf_a		pp
+242 105 25	senf_a		pp
+242 105 49	momf_a		pp
+242 105 66	evap_a		pp
+242 105 67	latfp1_a	qq
+!
+! Snow stuff
+252 105 8	snopl		dd
+252 105 9	snfor		dd
+250 105 68	sn_i		pp
+252 105 11	rhosnopl	dd
+252 105 18	rhosnfor	dd
+250 105 53	frsn_i		dd
+250 105 54	frsnfor_i	dd
+242 105 89	frsngrid_a	dd
+!
+! Surface/vegetation conditions
+250 105 59	albedo_i	pp
+250 105 80	lwlai_i		dd
+250 105 56	laiopn_int_i	dd
+250 105 57	lai_conif_i	dd
+250 105 58	lai_decid_i	dd
+250 105 51	frcw_i		dd
+250 105 103	frdecid_i	dd
+!
+! Soil moisture/runoff
+252 105 44	sw1opl		pp
+252 105 45	sw1for		pp
+252 105 46	sw2opl		pp
+252 105 47	sw2for		pp
+252 105 48	sw3opl		pp
+252 105 49	sw3for		pp
+250 105 79	swa_i		dd
+90 105 4006	runoff		pp
+!
+! Soil temperature
+242 105 95	tsland1_a	dd
+242 105 96	tsland2_a	dd
+242 105 97	tsland3_a	dd
+242 105 98	tsland4_a	dd
+242 105 99	tsland5_a	dd
+250 105 73	tsopsn5_i	dd
+250 105 78	tsfor5_i	dd
+250 105 69	tsopsn1_i	qq
+250 105 74	tsfor1_i	qq
+15 105 0	tsmax		dd
+16 105 0	tsmin		dd
+!
+! Every time step output
+115 105 0	lwdwnsrf_0	ss
+116 105 0	swdwnsrf_0	ss
+61 105 0	totprc_0	ss
+65 105 0	snowprc		ss
+1 105 0		sp		ss
+! Test stuff
+250 105 63	tseff_i		ss
+250 105 69	tsopsn1_i	ss
+250 105 74	tsfor1_i	ss
+250 105 107	t2mopsnsi_i	ss
+!!!
+!!! All Model levels!!!
+!!!
+11 109  24	t24		ss
+11 109  23	t23		ss
+11 109  22	t22		ss
+11 109  21	t21		ss
+11 109  20	t20		ss
+11 109  19	t19		ss
+11 109  18	t18		ss
+11 109  17	t17		ss
+11 109  16	t16		ss
+11 109  15	t15		ss
+11 109  14	t14		ss
+11 109  13	t13		ss
+11 109  12	t12		ss
+11 109  11	t11		ss
+11 109  10	t10		ss
+11 109  9	t9		ss
+11 109  8	t8		ss
+11 109  7	t7		ss
+11 109  6	t6		ss
+11 109  5	t5		ss
+11 109  4	t4		ss
+11 109  3	t3		ss
+11 109  2	t2		ss
+11 109  1	t1		ss
+33 109  24	u24		ss
+33 109  23	u23		ss
+33 109  22	u22		ss
+33 109  21	u21		ss
+33 109  20	u20		ss
+33 109  19	u19		ss
+33 109  18	u18		ss
+33 109  17	u17		ss
+33 109  16	u16		ss
+33 109  15	u15		ss
+33 109  14	u14		ss
+33 109  13	u13		ss
+33 109  12	u12		ss
+33 109  11	u11		ss
+33 109  10	u10		ss
+33 109  9	u9		ss
+33 109  8	u8		ss
+33 109  7	u7		ss
+33 109  6	u6		ss
+33 109  5	u5		ss
+33 109  4	u4		ss
+33 109  3	u3		ss
+33 109  2	u2		ss
+33 109  1	u1		ss
+34 109  24	v24		ss
+34 109  23	v23		ss
+34 109  22	v22		ss
+34 109  21	v21		ss
+34 109  20	v20		ss
+34 109  19	v19		ss
+34 109  18	v18		ss
+34 109  17	v17		ss
+34 109  16	v16		ss
+34 109  15	v15		ss
+34 109  14	v14		ss
+34 109  13	v13		ss
+34 109  12	v12		ss
+34 109  11	v11		ss
+34 109  10	v10		ss
+34 109  9	v9		ss
+34 109  8	v8		ss
+34 109  7	v7		ss
+34 109  6	v6		ss
+34 109  5	v5		ss
+34 109  4	v4		ss
+34 109  3	v3		ss
+34 109  2	v2		ss
+34 109  1	v1		ss
+51 109  24	q24		ss
+51 109  23	q23		ss
+51 109  22	q22		ss
+51 109  21	q21		ss
+51 109  20	q20		ss
+51 109  19	q19		ss
+51 109  18	q18		ss
+51 109  17	q17		ss
+51 109  16	q16		ss
+51 109  15	q15		ss
+51 109  14	q14		ss
+51 109  13	q13		ss
+51 109  12	q12		ss
+51 109  11	q11		ss
+51 109  10	q10		ss
+51 109  9	q9		ss
+51 109  8	q8		ss
+51 109  7	q7		ss
+51 109  6	q6		ss
+51 109  5	q5		ss
+51 109  4	q4		ss
+51 109  3	q3		ss
+51 109  2	q2		ss
+51 109  1	q1		ss
+!!!!
+!!!!
+!!!!
+!
+! Pressure levels
+6 100 200	gpot200		pp
+11 100 200	t200		pp
+33 100 200	u200		pp
+34 100 200	v200		pp
+39 100 200	omega200	pp
+52 100 200	rh200		pp
+6 100 300	gpot300		pp
+11 100 300	t300		pp
+33 100 300	u300		pp
+34 100 300	v300		pp
+39 100 300	omega300	pp
+52 100 300	rh300		pp
+6 100 500	gpot500		pp
+11 100 500	t500		pp
+33 100 500	u500		pp
+34 100 500	v500		pp
+39 100 500	omega500	pp
+52 100 500	rh500		pp
+6 100 700	gpot700		pp
+11 100 700	t700		pp
+33 100 700	u700		pp
+34 100 700	v700		pp
+39 100 700	omega700	pp
+52 100 700	rh700		pp
+6 100 850	gpot850		pp
+11 100 850	t850		pp
+33 100 850	u850		pp
+34 100 850	v850		pp
+39 100 850	omega850	pp
+52 100 850	rh850		pp
+6 100 925	gpot925		pp
+11 100 925	t925		pp
+33 100 925	u925		pp
+34 100 925	v925		pp
+39 100 925	omega925	pp
+52 100 925	rh925		pp
+!
+! Physiography data
+6 105 0		gpot		cl
+9 105 0		orosigm		cl
+246 105 1	lai_t1		cl
+246 105 2	lai_t2		cl
+246 105 3	lai_t3		cl
+246 105 4	z0_t1		cl
+246 105 5	z0_t2		cl
+246 105 6	z0_t3		cl
+246 105 7	emis_t1		cl
+246 105 8	alb_t1		cl
+246 105 9	veg_t1		cl
+246 105 10	frland		cl
+246 105 11	alb_soil	cl
+246 105 12	clay		cl
+246 105 13	sand		cl
+246 105 14	frac_t1		cl
+246 105 15	frac_t2		cl
+246 105 16	frac_t3		cl
+246 105 17	alb_t2		cl
+246 105 18	alb_t3		cl
+246 105 19	emis_t2		cl
+246 105 20	emis_t3		cl
+246 105 21	veg_t2		cl
+246 105 22	veg_t3		cl
+246 105 23	droot_t1	cl
+246 105 24	droot_t2	cl
+246 105 25	droot_t3	cl
+246 105 26	dsoil_t1	cl
+246 105 27	dsoil_t2	cl
+246 105 28	dsoil_t3	cl
+246 105 29	rsmin_t1	cl
+246 105 30	rsmin_t2	cl
+246 105 31	rsmin_t3	cl
+246 105 32	alb_veg_t1	cl
+246 105 33	alb_veg_t2	cl
+246 105 34	alb_veg_t3	cl
+246 105 35	texture		cl
+246 105 36	minlai_t1	cl
+246 105 37	minlai_t2	cl
+246 105 38	minlai_t3	cl
+246 105 39	maxlai_t1	cl
+246 105 40	maxlai_t2	cl
+246 105 41	maxlai_t3	cl
+246 105 42	frac_lake	cl
+246 105 43	soil_carb	cl
+246 105 44	frdeeplake	cl
+246 105 45	frmedlake	cl
+246 105 46	frshalllake	cl
+246 105 47	dptdeeplake	cl
+246 105 48	dptmedlake	cl
+246 105 49	dptshalllake	cl

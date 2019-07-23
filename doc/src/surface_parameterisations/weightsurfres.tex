@@ -1,0 +1,49 @@
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{figure}[!tbp]
+\centerline{
+ \includegraphics[width=8cm, trim=140 330 140 200]{figures/soil_resistances_RCA35.prn}}
+\caption{Principal sketch of the paralell coupling of individual soil resistances.}
+\label{soilsurfres}
+\end{figure}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+The vegetation surface resistance according to Equation \ref{eq:rsv} is
+
+%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{equation}
+  \label{eq:rsvb}
+  r_{sv} = \frac{r_{svmin}}{\mathrm{LAI}} F_1 F_2^{-1} F_3^{-1} F_4^{-1} F_5^{-1}.
+\end{equation}
+%%%%%%%%%%%%%%%%%%%%%%%%%
+
+To account for different
+soil moisture and temperature conditions in different root layers the common factor $F_2^{-1} F_5^{-1}$ is calculated
+individually for each soil layer which in combination with the other factors actually gives
+different $r_{sv}$-values for each soil layer. As shown in Figure \ref{soilsurfres} these individual
+resistances are coupled in parallell, also including the aerodynamic resitance $r_b$ (forest case),
+which gives a weighted value according to
+
+%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{equation}
+\label{eq:rsvweight}
+\begin{array}{ll}
+  \Frac{1}{r_b + r_{sv}} & = \Frac{Fr_{root1}}{r_b + r_{sv1}} + \Frac{Fr_{root2}}{r_b + r_{sv2}} + \Frac{Fr_{root3}}{r_b + r_{sv3}} = \\
+\ \\
+ & \frac{Fr_{root1}}{r_b + \frac{r_{svmin}}{\mathrm{LAI}} F_1 F_3^{-1} F_4^{-1} F_{21}^{-1} F_{51}^{-1}} +
+\frac{Fr_{root2}}{r_b + \frac{r_{svmin}}{\mathrm{LAI}} F_1 F_3^{-1} F_4^{-1} F_{22}^{-1} F_{52}^{-1}} +
+\frac{Fr_{root3}}{r_b + \frac{r_{svmin}}{\mathrm{LAI}} F_1 F_3^{-1} F_4^{-1} F_{23}^{-1} F_{53}^{-1}} = \\
+\ \\
+ & \left\{ \frac{1}{zqq}= \frac{r_{svmin}}{\mathrm{LAI}} F_1 F_3^{-1} F_4^{-1} \right\} = \\
+\ \\
+ & \Frac{Fr_{root1} zqq F_{21} F_{51}}{1+r_b zqq F_{21} F_{51}} + 
+ \Frac{Fr_{root2} zqq F_{22} F_{52}}{1+r_b zqq F_{22} F_{52}} +
+ \Frac{Fr_{root3} zqq F_{23} F_{53}}{1+r_b zqq F_{23} F_{53}} \\
+\end{array}
+\end{equation}
+%%%%%%%%%%%%%%%%%%%%%%%%%
+
+where $Fr_{root}$ represents the fractional distribution of roots between the three soil layers
+as described in Section \ref{sec:rootdistribution}. 
+

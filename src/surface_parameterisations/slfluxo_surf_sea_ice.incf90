@@ -1,0 +1,2161 @@
+subroutine slfluxo_surf_sea_ice(nhor,nlev,kstart,kstop, &
+     dtime,                                              &
+     t,q,u,v,pf,gpot,dph,                                &
+     ps,tsea,                                            &
+     tice,ticed,ticesn,ticesnd,tsnice,                   &
+     tskin,snice,swsnice,rhosnice,snmaxice,              &
+     frice,frsnice,frland,                               &
+     draindt,dsnowdt,                                    &
+     z0sea,                                              &
+     radf,albedo,albicenl,albsnice,scos,sswdn,emskin,    &
+     lcounttice,icethick,                                &
+     along,coslat,kstep,                                 &
+     t2ms,q2ms,t2mi,q2mi,                                &
+     rh2ms,rh2mi,                                        &
+     u10ms,v10ms,u10mi,v10mi,                            &
+     momfus,momfvs,momfui,momfvi,                        &
+     senfs,latfs,senfi,latfi,                            &
+     evaps,evapi,accrunofflake,                          &
+     sswrs,slwrs,sswri,slwri,                            &
+     ustars,ustari,                                      &
+     dzsnowice,                                          &
+     dticedt,dticeddt,                                   &
+     dticesndt,dticesnddt,dtsnicedt,                     &
+     dsnicedt,dswsnicedt,drhosnicedt,dsnmaxicedt)
+
+
+
+
+  !         authors:
+
+  !         stefan gollvik,(smhi) sept 1994
+
+  !         modified by bent hansen sass,(dmi), april 1995
+  !         modified by bent hansen sass,(dmi), december 1997
+  !                 ( to eliminate 'jqif'-function)
+  !         s.gollvik, p.samuelsson april 2000
+  !     a. rutgersson januari 2001 to get separate values of
+  !     radiation over sea and ice for use in ocean models
+
+
+  !         purpose:
+
+  !         a) provide surface input to verical diffusion
+
+  !         b) calculate diagnostic fields for temperatures and humidity,
+  !     
+  !         this is for sea and ice only!!!
+
+  !         input:
+
+  !         nhor:    number of points in  horizontal loop.
+  !         nlev:    number of vertical levels.
+  !         kstart:  start index of horizontal loop.
+  !         kstop:   stop index of horizontal loop.
+  !         dtime:   time step (s),(two time the time step in the dynamics)
+  !         t    :   temperature (k),(3d field)
+  !         q    :   specific humidity ,(kg/kg),(3d field)
+  !         u    :   wind component towards the east ,(m/s), (3d field)
+  !         v    :   wind component towards the north,(m/s), (3d field)
+  !         pf   :   pressure (pa) at model full levels.
+  !         gpot :   geopotential height (m2/s2)
+  !         dph  :   pressure difference (pa) between half levels.
+  !         ps   :   surface pressure (pa)
+  !         tsea :   sea surface temperature (k)
+  !         frice:   fraction of ice (relative to fraction of open sea)
+  !         frland:  fraction of land area.
+  !         sswdn:   global radiation      
+  !         emskin:  grid average emissivity
+  !         z0sea:   sea surface roughness (m)
+
+  !         radf:    grid square average of surface radiation budget
+  !         albedo:  grid square average of surface albedo
+  !         scos:    cosine for solar zenith angle
+
+
+  !     tskin:   skin surface temperature
+  !     tice :   sea ice surface temperature (k)
+  !     ticed:   sea ice deep temperature (k)
+  !     ticesn :   temperature under sea ice snow(k)
+  !     ticesnd:   deep emperature under sea ice snow (k)
+  !     tsnice :   sea ice snow temperature (k)
+  !     snice :    snow depth on the ice (m water equivalent, average over ice area)
+  !     swsnice :  water in the sea ice snow (m, average over ice area)
+  !     rhosnice :  density of  sea ice snow 
+  !     snmaxice : nmax for snow on ice
+  !     draindt, dsnowdt: rain and snow intencies
+  !     lcounttice: logical switch for computing tice-tendency 
+  !     =1 for sea_computatioms  =2 for lake computations, otherwise =0
+  !     icethick used for lcounttice=2
+
+
+  !         output
+
+  !         z0sea:   updated sea surface roughness (m)
+  !         t2ms:     2 meter temperature (k) over sea
+  !         q2ms:     2 mer specific humidity (kg/kg) over sea
+  !         t2mi:     2 meter temperature (k) over ice and snow on ice
+  !         q2mi:     2 meter specific humidity (kg/kg) over ice and snow on ice
+  !         u10ms:    10 meter u-wind over sea
+  !         v10ms:    10 meter v-wind over sea
+  !         u10mi:    10 meter u-wind over ice and snow on ice
+  !         v10mi:    10 meter v-wind over ice and snow on ice
+  !         momfus:     sea part of momentum flux towards the east (kg/ (ms2))
+  !         momfvs:     sea part of momentum flux towards the north (kg/ (ms2))
+  !         momfui:     ice and snow part of momentum flux towards the east (kg/ (ms2))
+  !         momfvi:     ice and snow part of momentum flux towards the north (kg/ (ms2))
+  !     senfi:  sensible heat flux for sea ice
+  !     latfi:  latent heat flux for sea ice
+  !     ustars:   surface friction velocity (m/s) for sea 
+  !     ustari:   surface friction velocity (m/s) for ice
+  !     dzsnowice:   depth of snow over ice (m)
+  !     ps
+  !     ar
+  !     senfs:     sensible heat flux for sea 
+  !     latfs:     latent heat flux for sea 
+  !     sswrs:  surface short wave radiation over sea
+  !     slwrs:  surface long wave radiation over sea
+  !     sswri:  surface short wave radiation over ice
+  !     slwri:  surface long wave radiation over ice
+  !     dticedt: tendency of ice-temperature (=0 for lcounttice=0.0_realkind)
+  !     dticeddt: tendency of deep ice-temperature
+  !     dticesndt :   tendency of temperature under sea ice snow 
+  !     dticesnddt :   tendency of deep temperature under sea ice snow
+  !     dtsnicedt :   tendency of sea ice snow temperature 
+  !     dsnicedt :    tendency of snow depth on the ice
+  !     dswsnicedt :  tendency of rwater in the sea ice snow 
+  !     drhosnicedt :  tendency of sea ice snow density
+  !     dsnmaxicedt :  tendency of snmaxice
+
+  !     note: latfs,senfs > 0 for fluxes towards surface.
+
+  use comrpar
+  use confys
+  use ctun
+  use escom
+
+  use comdfb
+  implicit none
+
+  integer jl,nhor,nlev,kstart,kstop
+
+  real(kind=realkind) dtime
+  real(kind=realkind) zfrsea,zseaon,zseaoff,zdens,zvirnl,zdup2,zvel,zcrdq,            &
+       z03,zriq,zrous,zroumin,zslask,zhnlev,z01,z02,zcneut,zstaon,      &
+       ztsi,zqsi,zepcr,zstaoff,zria,zdr,zcdrag,zcdrgh,zm,zsecu,         &
+       zfmx,zqb,zcams3,zcharg,zqam,ztam,zlat,zh,zeeff,zuneg,zupos,      &
+       zunlev,zvnlev,zrougl,zustar,zmoin,zsl1,ztotf,zl2,zln2,           &
+       zl2lim,zust,zvst,zthst,zqstar,zunson,zunsoff,zt2m,zq2m,          &
+       zln2k,zy,zy2,zrkar,zfrlim,ziceon,ziceoff,zradf,                  &
+       zalb,ztdum,zrads,zalbice,zscos,                                  &
+       zwet,zqseff,ztseff,z10m,zradl,                                   &
+       zqs,zra,zpar,zqlim,zueps,zqc,zqd,zqdh,zcons1,                    &
+       z2m,zsl11,zhm,zq,zrepac,zcrit,zri,zvneg,zvpos,ze,ztemp,          &
+       zx10,zu10,zv10,zl10,zln10,zln10k,zrpi4,zslask2,fh,fhder,ztice,   &
+       zlimon,zlimoff,zalphaice,ziceth,zradeff,zicelayer,zalbsea,       &
+       zrsinv,zx0,zfact,zxm,zacof                                        
+  real(kind=realkind) wa(3),wb(3),wc(3),wr(3),wtemp(3)                                       
+
+  real(kind=realkind)  gpot(nhor,nlev),dph(nhor,nlev+1),q(nhor,nlev),                  &
+       t(nhor,nlev),pf(nhor,nlev),u(nhor,nlev),v(nhor,nlev)                   
+
+  real(kind=realkind) frice(nhor),ustars(nhor),ustari(nhor),latfs(nhor),               &
+       senfs(nhor),ps(nhor),                                            &
+       t2ms(nhor),q2ms(nhor),t2mi(nhor),q2mi(nhor),                     &
+       u10ms(nhor),v10ms(nhor),u10mi(nhor),v10mi(nhor),                 &
+       momfus(nhor),momfvs(nhor),momfui(nhor),momfvi(nhor),             &
+       z0sea(nhor),tsea(nhor),frland(nhor),                             &
+       dzsnowice(nhor)
+  real(kind=realkind) radf(nhor),sswdn(nhor),albicenl(nhor),emskin(nhor),              &
+       albedo(nhor),scos(nhor),alb_b,albsnice(nhor)                           
+
+  real(kind=realkind) tice(nhor),tskin(nhor),                                          &
+       senfi(nhor),latfi(nhor),                                         &
+       evaps(nhor),evapi(nhor),accrunofflake(nhor)                            
+
+
+
+  real(kind=realkind) ticed(nhor),ticesn(nhor),ticesnd(nhor),                          &
+       tsnice(nhor),snice(nhor),swsnice(nhor),rhosnice(nhor),           &
+       snmaxice(nhor),frsnice(nhor),                                    &
+       dtsniceddt(nhor),dticesndt(nhor),dticesnddt(nhor),               &
+       dtsnicedt(nhor),dsnicedt(nhor),dswsnicedt(nhor),                 &
+       icethick(nhor),drhosnicedt(nhor),dsnmaxicedt(nhor),              &
+       dticeddt(nhor),draindt(nhor),dsnowdt(nhor)                             
+
+  real(kind=realkind) zfrice,zrdt,zrocg,zd1,zd2,zslask1,ztlamda,zct,zctd,              &
+       zdbnet,zflx,zdflx,ziclatn,ziclats,ziclonw,ziclone,zustarsn,      &
+       zkdf,ztfp,ztmelt,zmelbs,zfzbr,zsndepth,zsnlayer,zrssn,           &
+       zdsnst,zswsn,zswsnp,zticep,zticedp,zfricesn,zfricens,       &
+       zicenson,zicensoff,zicesnon,zicesnoff,rhoice,ztlamdasn,          &
+       zu10msn,zv10msn,zmomfusn,zmomfvsn,zsenfsn,zlatfsn,zevapsn,       &
+       zsurfsntot,zdelta1t,zdelta2t,zsnmel,zfzr2sn,zrain2snow,          &
+       zrsfl,zticesnp,zticesndp,ztsnicep,zswsnicep,                     &
+       zrhosnicep,zswsnice,zwsat,zsninv,zeps,zsncrit,zswsncr,           &
+       zticesn,zticesnd,ztsnice,zfzsnr,zmelbsi,zrhost,                  &
+       zsnicep,zsnstp,zrhodry,zdweight,zsndinv,zsafe,                   &
+       zsnmaxicep,zk1,zk2,zk,zalbsnice,zfrsnasymp,zsfdist,              &
+       zfrsnicep,zsn0,zsnlim,zdsnice,zlatcn,zlatcs,                     &
+       zqbottom,zsswri,zslwri,zrhosn,c1,zfreezefrac,zsnswcrit,zlatsn,   &
+       ztdumout,zqdumout,zudumout                                        
+  real(kind=realkind) rhosnmax,rhosnmin,taufsn,tau1sn,albsnmin,albsnmax,tauasn,        &
+       ztalblim,ztauasn                                                  
+  integer ncounttice,nbaltic,jqlake,jq                                        
+
+
+
+  !    additional local variables for calculation of                          
+  !    heat and momentum flux over rough and smooth sea.                           
+
+  real(kind=realkind) zrey,zfrey,zslash,zslasq,zslasm,z01h,z01q,                       &
+       z02h,z02q,zcneuh,zcneuq,zcdrgq,zfint,zcvis,zustars,              &
+       zlnzrzh,zlnzrzq,zust2,zchargf,zdcharg,                     &
+       zcm,zch,z1r3,zcmol,zroum,zqar                                     
+  real(kind=realkind) zln,zyn,zyn2,znrz2,zxn,zhrmax                                     
+
+  real(kind=realkind) sswri(nhor),slwri(nhor),                                         &
+       dticedt(nhor),sswrs(nhor),slwrs(nhor),hsnow,hice
+  real(kind=realkind),intent(in)::lcounttice(nhor)
+
+  !     variables for water balance
+
+  real(kind=realkind) storage_w(nhor),flux_w(nhor)
+  real(kind=realkind) zprec,zevap,zruno,zsn2sw
+
+  integer  kstep
+  real(kind=realkind)     along(nhor),coslat(nhor)
+
+
+  !     work space
+
+  real(kind=realkind) wrous(6)
+  real(kind=realkind) zalon,zalat
+
+!  logical lprint,lprint2,lprint3
+
+  real(kind=realkind) tdpre
+  real(kind=realkind) rh2ms(nhor),rh2mi(nhor),zrh2m,zrhdumout
+
+
+
+
+
+
+  data ziclatn/66._realkind/, ziclats/53._realkind/, ziclonw/15._realkind/, ziclone/30._realkind/
+
+
+  !     1.1: surface type roughnesses for heat flux (not water):
+
+
+  !     wrous(1) is a dummy value for water (currently not used)
+  !     wrous(2) applies to sea ice
+  !     wrous(3) applies to 'bare soil' area (not explicitly used)
+  !     wrous(4) applies to agricultural area (not explicitly used)
+  !     wrous(5) applies to forest area (not explicitly used)
+  !     wrous(6) applies to snow on sea ice
+
+  !     currently the orographic roughness field is used as heat
+  !     roughness over land, but with an upper limit equal to
+  !     'chrmax' imposed.
+
+
+  wrous(1)=-999._realkind
+
+  !     gives cd=0.0_realkind018 for zhnlev=10 m (after discussion with anders omstedt)
+  !     a realistic value for baltic sea ice.
+
+  wrous(2)=8.e-04_realkind
+  wrous(3)=0.50_realkind
+  wrous(4)=0.013_realkind
+  wrous(5)=1.0_realkind
+  wrous(6)=0.005_realkind
+
+
+  !     1.2: define local constants
+
+
+
+
+  !     note that in this routine zfrlim is smaller than for the land part
+
+  zfrlim=0.0001_realkind
+
+
+  !     molecular kinematic viscity of air = 'zcvis'
+
+  zcvis=1.5e-5_realkind
+  z1r3=1._realkind/3._realkind
+
+  !     zcm=1./(conm*delta_h*pr**(2/3), conm=2.0_realkind*zqb/(3.*zqb*zqc).
+  !     zch=1./(conh*delta_h*pr**(-2/3)), conh=3.*zqb/(3*zqb*zqc).
+  !     delta_h=0.17 (deardorff et al., 1969, townsend, 1964).
+  !     pr=0.71 is the prandtl number.
+
+  zcm=0.9855_realkind
+  zch=0.9363_realkind
+  zhrmax=0.50_realkind
+
+
+  zqlim=0.0001_realkind
+  zueps=0.1_realkind
+  !     psbc      zroumin=5.e-5
+  zroumin=4.e-5_realkind
+  zqb=5._realkind
+  zqc=5._realkind
+  zqd=5._realkind
+  zqdh=1._realkind
+  zrpi4=pi/4._realkind
+  zcrdq=1._realkind/epsilo-1._realkind
+  zcams3=3._realkind*zqb*zqc*carman**2_realkind
+  zcons1=ccpq*cpair
+  zhnlev=-rair*288.15_realkind*clog/gravit
+  zsl1=2._realkind*rair*gravit*carman/cpair
+  zsl11=0.61_realkind*cpair
+  z2m=2._realkind
+  zk1=0.2_realkind
+  zk2=1.e-06_realkind
+  zk=exp(-zk2*dtime)     
+
+  znrz2=zhnlev/z2m
+  z10m=10._realkind
+  zrkar=1._realkind/carman
+  zm=4._realkind*zrkar
+  zhm=zm
+  zq=zm
+  zrepac=1._realkind/(epsilo*acrit)
+  ztdum=280._realkind
+  ztdumout=99._realkind
+  zqdumout=-1.e-2_realkind
+  zudumout=99._realkind
+  zrhdumout=0._realkind
+
+  !     psbc      zcharg= 0.0_realkind14/gravit
+  !     psbc      zdcharg=0.0_realkind18/gravit
+!cgjcharca3  zcharg= 0.009_realkind/gravit
+!cgjcharca3  zdcharg=0.012_realkind/gravit
+!cgjcharca3
+  zcharg= 0.014_realkind/gravit
+  zdcharg=0.018_realkind/gravit
+!cgjcharca3
+
+  !     zcharg=0.0_realkind32/gravit
+  zcrit=acrit
+  zepcr=acrit*epsilo
+  zsecu=1.e-7_realkind
+  zl2lim=-4.0_realkind
+  zicelayer=0.1_realkind             !  minimum ice thickness where heat cond is neglected
+  zwsat=0.1_realkind
+  zeps=1.e-06_realkind
+  zsncrit=0.03_realkind
+  zsnswcrit=0.0001_realkind
+  zsfdist=0.6_realkind
+  !     ps070618      zfrsnasymp=0.95
+  zfrsnasymp=0.985_realkind
+  zsnlim=0.0015_realkind
+  !     sg040315 constants used to define a new function of frsn, linear up to zx0,
+  !     and quadratic up tu zxm, where frsn=zfrsnasymp
+
+  zfact=0.1_realkind/0.0007_realkind
+  zx0=0.005_realkind
+  zacof=zfact/(4._realkind*(zx0-zfrsnasymp/zfact))
+  zxm=2._realkind*zfrsnasymp/zfact-zx0      
+
+  zsnlayer=0.15_realkind
+
+
+
+  zrdt=1._realkind/dtime
+  zd1=0.07_realkind
+  rhoice=920._realkind               ! ice density
+  zrocg=2.05e06_realkind             ! ice volumetric heat capacity (j m-3 k-1)
+  ztlamda=2.22_realkind              ! ice thermal conductivity
+  ztmelt=tmelt
+  rhosnmin=100._realkind
+  rhosnmax=300._realkind
+  taufsn=0.24_realkind
+  tau1sn=86400._realkind
+  albsnmin=0.70_realkind             ! minimum albedo for snow on sea/lake ice
+  albsnmax=0.85_realkind
+  tauasn=0.008_realkind
+  ztalblim=ztmelt-5._realkind
+
+  zrsfl=dtime/rhoh2o
+  zct=1._realkind/(zd1*zrocg)
+  zslask1=0.5_realkind*dtime*zct
+
+
+  !     1.3: initialize arrays
+
+
+  do 10 jl=kstart,kstop
+
+     senfs(jl)=0.0_realkind
+     latfs(jl)=0.0_realkind
+     ustars(jl)=0.0_realkind
+     ustari(jl)=0.0_realkind
+     t2ms(jl)=0.0_realkind
+     q2ms(jl)=0.0_realkind
+     t2mi(jl)=0.0_realkind
+     q2mi(jl)=0.0_realkind
+     u10ms(jl)=0.0_realkind
+     v10ms(jl)=0.0_realkind
+     u10mi(jl)=0.0_realkind
+     v10mi(jl)=0.0_realkind
+     senfi(jl)=0.0_realkind
+     latfi(jl)=0.0_realkind
+     evaps(jl)=0.0_realkind
+     evapi(jl)=0.0_realkind
+
+     momfus(jl)=0.0_realkind
+     momfvs(jl)=0.0_realkind
+     momfui(jl)=0.0_realkind
+     momfvi(jl)=0.0_realkind
+     u10ms(jl)=0.0_realkind
+     v10ms(jl)=0.0_realkind
+     u10mi(jl)=0.0_realkind
+     v10mi(jl)=0.0_realkind
+     sswrs(jl)=0.0_realkind
+     slwrs(jl)=0.0_realkind
+     sswri(jl)=0.0_realkind
+     slwri(jl)=0.0_realkind
+
+     dzsnowice(jl)=0.0_realkind
+
+     !     put tendencies to zero
+
+     dticedt(jl)=0.0_realkind
+     dticeddt(jl)=0.0_realkind
+     dticesndt(jl)=0.0_realkind
+     dticesnddt(jl)=0.0_realkind
+     dtsnicedt(jl)=0.0_realkind
+     dsnicedt(jl)=0.0_realkind
+     dswsnicedt(jl)=0.0_realkind
+     drhosnicedt(jl)=0.0_realkind
+     dsnmaxicedt(jl)=0.0_realkind
+10 enddo
+
+
+
+
+  !     2.  computations over sea
+
+
+  do 20 jl=kstart,kstop
+
+     zfrsea=(1.0_realkind-frland(jl))*(1.0_realkind-frice(jl))
+
+     zalat=acos(coslat(jl))*180.0_realkind/pi
+     zalon=along(jl)
+
+!!$     lprint=.false.
+!!$     if(along(jl)>357.8 .and. along(jl)<357.9)then
+!!$        if(zalat>38.1.0_realkindand. zalat<38.2)then
+!!$           lprint=.true.
+!!$        endif
+!!$     endif
+
+     if( zfrsea>zfrlim ) then
+        zseaon=1.0_realkind
+        zseaoff=0.0_realkind
+     else
+        zseaon=0.0_realkind
+        zseaoff=1.0_realkind
+     endif
+
+     !     zseaon=0.0_realkind and zseaoff=1.0 means computations not used
+
+     zqam=max( q(jl,nlev),zqlim )
+     zdens=dph(jl,nlev+1)/gpot(jl,nlev)
+     zvirnl=1.0_realkind+zcrdq*zqam
+
+     zdup2=max( u(jl,nlev)**2 + v(jl,nlev)**2,zueps )
+     zvel=sqrt(zdup2)
+
+
+!cgjcharca3
+!     zcharg= 0.009_realkind/gravit
+!     zdcharg=0.012_realkind/gravit
+!     if(zvel<8.0_realkind)then
+!        zcharg=zcharg/20.0_realkind
+!        zdcharg=zdcharg/20.0_realkind
+!     endif
+!cgjcharca3
+
+
+
+     !         ln(hybf(nlev))= ln(pf(nlev))-ln(psm) =gt; z03=-fi/(t*v**2)
+
+     !     2.05. calculate interpolation function zfint for use in
+     !     the calculation of z0-sea,
+     !     assuming rough sea for v &gt; 5.0 m/s
+     !     and smooth sea for v &lt; 3.0 m/s, and applying
+     !     a square root interpolation between the regimes.
+     !     rough sea: z0-sea=beta*ustars*ustars/gravit.
+     !     smooth sea: z0-sea=0.11*1.5e-5/ustars.
+
+     zfint=min((zvel-3.0_realkind)/2.0_realkind,1.0_realkind)
+     zfint=max(zfint,0.0_realkind)
+     zfint=sqrt(zfint)
+
+     z03=rair*clog/(zdup2)
+     zriq =-z03*( gpot(jl,nlev)/(cpair+zcons1*zqam) + &
+          zvirnl*t(jl,nlev) )
+
+     !         z/z0+1 = (rough(jl)+zhnlev)/rough(jl); z=height of 'nlev'
+     !         computing new surface roughness for water:
+
+     zrous=max( z0sea(jl), zroumin )
+     zslask=zhnlev/zrous
+     z01=1.0_realkind/(log(zslask))**2_realkind
+     zcneut=z01*(carman**2)
+
+
+     !     2.06. redefine constant beta in charnock relation if
+     !     fraction of sea is less than zmlim.
+
+
+     zchargf=zcharg
+     if(1.0_realkind-zfrsea>zfrlim) zchargf=zcharg+zdcharg
+
+     !         2.1 calculation of richardson number ( zri ) for surface
+     !             temperature  tsea(jl).
+
+
+     ztsi=tsea(jl)
+     if(tsea(jl)<270.0_realkind)ztsi=tmelt
+     if(tsea(jl)>350.0_realkind)ztsi=350.0_realkind
+     ztsi = ztsi*zseaon + ztdum*zseaoff
+
+     zqsi=zepcr*esatw(ztsi)/(ps(jl)-(1.0_realkind-epsilo)*zcrit*esatw(ztsi))
+
+     zri=zriq + z03 *( 1.0_realkind+zcrdq*zqsi)*ztsi
+
+     !     zstaon=1 if zri>0.0_realkind
+
+     if( zri>0.0_realkind ) then
+        zstaon=1.0_realkind
+        zstaoff=0.0_realkind
+     else
+        zstaon=0.0_realkind
+        zstaoff=1.0_realkind
+     endif
+
+     zria=abs(zri)
+
+     !     nwn  calculation of surface drag coefficients
+
+     !     2.15. calculate free convection velocity 'zslask'
+     !     and (z/z0fc)**0.5, where z0fc=zcvis/zslask is a
+     !     free convection roughness length.
+
+     zslask=(zria*zdup2*zcvis/zhnlev)**z1r3
+     z02=sqrt(zslask*zhnlev/zcvis)
+
+     !     nwn  step 1: momentum drag
+
+     !     stable richardson number &gt; 0.0_realkind
+     !     (formulae according to louis et al,1982)
+
+     zdr=2.0_realkind*zqb*zria/sqrt(1.0_realkind +zqd*zria)
+     zcmol=zcvis/(zhnlev*zvel)
+     zcdrag=zcneut/( 1.0_realkind +zdr )+zcmol
+
+     !     unstable richardson number
+     !     (formulae according to louis et al,1982)
+
+     zfmx=zqb*zria/(1.0_realkind+zcm*z01*z02*zcams3*sqrt(zria))
+     zcdrag=zstaoff*zcneut*(1.0_realkind+2.0_realkind*zfmx) +zstaon*zcdrag
+
+
+     !     step 2: kinematic heat and moisture drag
+
+
+     zust2=zcdrag*zdup2
+     zustars=sqrt(zust2)
+
+
+
+     !     2.18. calculate surface reynolds number
+
+
+     zrey=zrous*zustars/zcvis
+
+     !     calculate ln(z0m/z0h) and ln(z0m/z0q)
+     !     according to ln(z0m/zoh)=2.48*sqrt(sqrt(re*))-2.
+     !     and          ln(z0m/z0q)=2.28*surt(surt(re*))-2.0_realkind
+     !     taken from j.r. garratt, 1992: the atmospheric
+     !     boundary layer, p 102.
+
+
+     zfrey = sqrt(zrey)
+     zfrey = sqrt(zfrey)
+     zslasm = 1.0_realkind/sqrt(z01)
+     !     ar   zslash = (0.0_realkind5*zfint+2.43)*zfrey - 2.0_realkind
+     !     ar   zslasq = zslash + (0.5*zfint-0.70)*zfrey
+     !     ar010427 new coefficient to reduce chn
+     zslash = (0.92_realkind*zfint+2.43_realkind)*zfrey - 2.0_realkind
+     zslasq = zslash + (0.08_realkind*zfint-0.70_realkind)*zfrey
+     zlnzrzh = zslash+zslasm
+     zlnzrzq = zslasq+zslasm
+     z01h = 1.0_realkind/(zlnzrzh*zslasm)
+     z01q = 1.0_realkind/(zlnzrzq*zslasm)
+
+
+     !     chn=k*k/(ln(z/z0m)*ln(z/z0h))=
+     !     cmn/(1.0_realkind+ln(z0m/z0h)/ln(z/z0m))
+
+     zcneuh = zcneut/(1.0_realkind + zslash/zslasm)
+     zcneuq = zcneut/(1.0_realkind + zslasq/zslasm)
+
+
+     !     zstaon=1 if zri>0.0_realkind
+
+     if( zri>0.0_realkind ) then
+        zstaon=1.0_realkind
+        zstaoff=0.0_realkind
+     else
+        zstaon=0.0_realkind
+        zstaoff=1.0_realkind
+     endif
+
+     zria=abs(zri)
+
+     !     stable richardson number &gt; 0,
+     !     (formulae according to louis et al., 1982)
+
+
+
+     zqar=2.0_realkind
+     !     zdr=2.0*zqb*zria*sqrt(1.0_realkind +zqdh*zria)
+     zdr=2.0_realkind*zqar*zqb*zria*sqrt(1.0_realkind +zqdh*zria)
+     zdr=1.0_realkind/(1.0_realkind + zdr)
+     zcdrgh=zcneuh*zdr+zcmol/0.71_realkind
+     zcdrgq=zcneuq*zdr+zcmol/0.60_realkind
+
+
+     !     unstable richardson number
+     !     (formulae according to louis et al., 1982)
+     !     but with a free convection modification.
+
+
+     zdr=zcams3*sqrt(zria)
+
+     zqar=2.0_realkind
+     !     zslask=zcneuh*(1.0_realkind+3.*(zqb*zria/(1.0_realkind+zch*z01h*z02*zdr)))
+     zslask=zcneuh*(1.0_realkind+3.0_realkind*(zqb*zria/(1.0_realkind+zqar*zch*z01h*z02*zdr)))
+     zcdrgh=zstaoff*zslask+zstaon*zcdrgh
+
+     !     zslask=zcneuq*(1.0_realkind+3.*(zqb*zria/(1.0_realkind+zch*z01q*z02*zdr)))
+     zslask=zcneuq*(1.0_realkind+3.0_realkind*(zqb*zria/(1.0_realkind+zqar*zch*z01q*z02*zdr)))
+     zcdrgq=zstaoff*zslask+zstaon*zcdrgq
+
+
+     !     roughness calc for sea:
+
+     !     calculate z0-sea, using smooth interpolation in
+     !     wind speed between smooth and rough surface.
+     !     calculation of zfint is performed in 2.05 above.
+     !     zchargf is calculated in 2.06.
+
+
+     zrous=(1.0_realkind-zfint)*0.11_realkind*zcvis/zustars + zfint*zust2*zchargf
+     z0sea(jl)=max(zrous,zroumin)
+
+
+     !     ztam is pot. temp. at nlev. it is assumed that
+     !     theta/temp = 1.0_realkind
+
+     ztam=t(jl,nlev) +gpot(jl,nlev)/cpair
+
+     !     2.2  flux computations
+
+     !     ps    zlat = latvap+latice*(0.5-sign(0.5,ztsi-tmelt))
+     !     always water!!!
+     zlat = latvap
+
+
+     !     sensible heat flux 'zh' and latent heat flux 'zeeff'
+     !     are negative upwards
+     !     aerodynamic resistance for heat and moisture='zra'
+     !     ( computation not used if zseaoff=1.0_realkind)
+
+
+     zra=zseaon/(zcdrgh*zvel) +zseaoff
+     zh=-zdens/zra*cpair*(ztsi-ztam)
+     zra=zseaon/(zcdrgq*zvel) + zseaoff
+     zeeff = -zdens/zra * (zqsi - zqam) * zlat
+
+
+
+     !     c     sensible heat flux 'zh' and latent heat flux 'zeeff'
+     !     c     are negative upwards
+     !     c     ---------------------------------------------------
+     !     c      zh=-zdens/zra*cpair*(ztsi-ztam)
+     !     c      zeeff = -zdens/zra * (zqsi - zqam) * zlat
+
+     !     calculation of t2m,q2m
+
+     !     wind components must not be zero.
+
+
+     if( u(jl,nlev)<0.0_realkind ) then
+        zuneg=1.0_realkind
+        zupos=0.0_realkind
+     else
+        zuneg=0.0_realkind
+        zupos=1.0_realkind
+     endif
+
+     zunlev=zuneg*min(u(jl,nlev),-zueps)+ zupos*max(u(jl,nlev),zueps)
+
+     if( v(jl,nlev)<0.0_realkind ) then
+        zvneg=1.0_realkind
+        zvpos=0.0_realkind
+     else
+        zvneg=0.0_realkind
+        zvpos=1.0_realkind
+     endif
+
+     zvnlev=zvneg*min(v(jl,nlev),-zueps)+zvpos*max(v(jl,nlev),zueps)
+
+
+
+     zrougl=min( z0sea(jl),z2m )
+
+     !     c      zustar=sqrt(zcdrag*zdup2)
+     !     c      zustar=max(zustar,0.0_realkind1)
+
+     zustar=sqrt(zcdrag*zdup2)
+     zustar=max(zustar,0.001_realkind)
+
+     ustars(jl)=zustar*zustar*zseaon
+     ustars(jl)=sqrt(ustars(jl))
+
+
+     ztotf=zh+zsl11*t(jl,nlev)*zeeff/zlat
+
+     !     'zmoin' is the uinverse monin-obukhov length
+
+     zmoin=zsl1*ztotf/( 2.0_realkind*(ps(jl)-dph(jl,nlev+1))*zustar**3 )
+
+     zl2=z2m*zmoin
+
+     zln=zhnlev*zmoin
+     !     ps050616      zl2=max( zl2, zl2lim )
+     zln2=log(z2m/zrougl)
+     zln2k=zln2*zrkar
+
+     !     compute components 'u*' and 'v*' (ustar and vstar)
+
+     zust=zustar*zunlev/zvel
+     zvst=zustar*zvnlev/zvel
+
+     !     temperature-and humidity fluctuations teta*,q*,
+     !     ( 'zthst', 'zqstar' )
+
+
+     zthst=zh/(cpair*zdens*zustar*sqrt( zcneuh/zcneut ))
+     zqstar=zeeff/(zlat*zdens*zustar*sqrt( zcneuq/zcneut ))
+
+     !     c      zthst=zh/(cpair*zdens*zustar)
+     !     c      zqstar=zeeff/(zlat*zdens*zustar)
+
+     !     unstable case zunson=1.0_realkind
+
+
+     if( ztotf<0.0_realkind ) then
+        zunson=1.0_realkind
+        zunsoff=0.0_realkind
+     else
+        zunson=0.0_realkind
+        zunsoff=1.0_realkind
+     endif
+
+     !     zt2m etc dummy if zunson=1.0_realkind
+
+     zslask=max(-89._realkind,zseaon*( zunson + zunsoff*(-zhm*zthst*zl2/ztam) ) +zseaoff)
+     zt2m=ztsi+zthst*zln2k + (ztam-ztsi)*(1.0_realkind- exp(zslask) )
+     zslask=max(-89._realkind,zseaon*( zunson + zunsoff*(-zq*zqstar*zl2/zqam) ) +zseaoff)
+     zq2m=zqsi+zqstar*zln2k +  (zqam-zqsi)*(1.0_realkind- exp(zslask) )
+
+     !     zy2 dummy if zunson=0
+
+     zy=sqrt( 1.0_realkind -9.0_realkind*zl2*zunson )
+     zy=min( zy, sqrt( 8.0_realkind/z0sea(jl) ) -1.0_realkind )
+     zy2=zunson*zy +zunsoff
+     zy2=zy2*zseaon +zseaoff
+
+     !     should it really be ztam/zqam in the calc. of wt2ms etc?
+
+     zyn=sqrt( 1.0_realkind -9.0_realkind*zln*zunson )
+     zyn2=zyn*zunson + zunsoff
+     zyn2=zyn2*zseaon + zseaoff
+
+     zpar=( (1.0_realkind +zy2)/(1.0_realkind +zyn2) )**2
+     zpar=zpar*znrz2
+     zpar=log(zpar)*zrkar
+
+     t2ms(jl)=( zunson*( ztam -zthst*zpar) +&
+          zunsoff*zt2m )*zseaon + ztdumout*zseaoff
+     q2ms(jl)=( zunson*( zqam -zqstar*zpar ) +   zunsoff*zq2m )
+     q2ms(jl)=max(q2ms(jl),0.0_realkind)*zseaon + zqdumout*zseaoff
+
+
+     if(q2ms(jl)>0.0_realkind) then
+        rh2ms(jl)=q2e(ps(jl),q2ms(jl))/t2es(t2ms(jl))
+     else
+        rh2ms(jl)=0.0_realkind
+     endif
+     rh2ms(jl)=min(max(rh2ms(jl),0.0_realkind),1.0_realkind)*zseaon+zrhdumout*zseaoff
+
+     !---- new by anna to have values of wind over sea
+
+     zl10=z10m*zmoin
+     zln10=log(z10m/zrougl)
+     zln10k=zln10*zrkar
+
+     !     zu10 etc dummy if zunson=1.0_realkind
+
+     zslask=max(-89._realkind,zunson + zunsoff*(-zm*zust*zl10/zunlev))
+     zu10=zust*zln10k + zunlev*(1.0_realkind-exp(zslask))
+     zslask=max(-89._realkind,zunson + zunsoff*(-zm*zvst*zl10/zvnlev))
+     zv10=zvst*zln10k + zvnlev*(1.0_realkind-exp(zslask))
+
+     !     zx10 dummy if zunson=0
+
+     zx10=zunson*(1.0_realkind-15._realkind*zl10) + zunsoff
+     zx10=sqrt(sqrt(zx10))
+
+
+     zxn=zunson*( 1.0_realkind -15._realkind*zln) + zunsoff
+     zxn=zunson*sqrt( sqrt(zxn) )
+
+     zpar= -log( z10m*(1.0_realkind +zxn*zxn)/( zhnlev*(1.0_realkind +zx10*zx10)) ) -    &
+          2.0_realkind*log( (1.0_realkind +zxn)/(1.0_realkind +zx10) ) +                            &
+          2.0_realkind*( atan(zxn) -atan(zx10) )                                      
+
+     u10ms(jl)=zunson*( u(jl,nlev) -zrkar*zust*zpar ) +zunsoff*zu10    
+     v10ms(jl)=zunson*( v(jl,nlev) -zrkar*zvst*zpar ) +zunsoff*zv10    
+     momfus(jl)=zdens*u(jl,nlev)/( zvel +zsecu ) *                    &
+          zustar*zustar*zseaon                                         
+     momfvs(jl)=zdens*v(jl,nlev)/( zvel +zsecu ) *                    &
+          zustar*zustar*zseaon
+     u10ms(jl)=u10ms(jl)*zseaon + zudumout*zseaoff
+     v10ms(jl)=v10ms(jl)*zseaon + zudumout*zseaoff
+
+     momfus(jl)=zseaon*momfus(jl)
+     momfvs(jl)=zseaon*momfvs(jl)
+
+     senfs(jl)=zh*zseaon
+     latfs(jl)=zeeff*zseaon
+     !     evaporation from water [kg/m2 or mm per time step]
+     evaps(jl)=-latfs(jl)/zlat*dtime
+
+
+
+
+     !     2.3  radiation computations over sea part
+
+     !     compute radf for sea, assuming longwave radiation towards
+     !     surface is the same as that of whole gridsquare
+
+     zscos=0.2_realkind/(1.0_realkind+scos(jl)) - 0.1_realkind
+     zalb = albedo(jl) + zscos                   
+     zrads=sswdn(jl)
+
+     zradf = radf(jl)-zrads*(1.0_realkind-zalb)
+
+     zalbsea = albwater + zscos                   
+     sswrs(jl) = (1.0_realkind-zalbsea)*zrads*zseaon
+
+     !     zradl is downward long wave radiation (common for all surfaces)
+
+     zradl = zradf/emskin(jl) + stebol*tskin(jl)**4
+     slwrs(jl)=emwater*(zradl-stebol*ztsi**4)*zseaon 
+
+
+
+20 enddo
+
+
+
+  !     3.  computations over ice.
+
+
+  do 30 jl=kstart,kstop
+
+
+     !     put new values equal old values
+
+     zticep=tice(jl)
+     zticedp=ticed(jl)
+     zticesnp=ticesn(jl)
+     zticesndp=ticesnd(jl)
+     ztsnicep=tsnice(jl)
+     zsnicep=snice(jl)
+     zswsnicep=swsnice(jl)
+     zrhosnicep=rhosnice(jl)
+     zsnmaxicep=snmaxice(jl)
+
+
+     !     optional printing:
+
+     zalat=acos(coslat(jl))*180.0_realkind/3.141592654_realkind
+!!$     lprint2=.false.
+!!$     if(along(jl)>62.8 .and. along(jl)<62.9)then
+!!$        if(zalat>68.7.and. zalat<68.8)then
+!!$           lprint2=.true.
+!!$        endif
+!!$     endif
+!!$
+!!$     lprint=.false.
+!!$     lprint2=.false.	
+!!$     lprint3=.false.
+
+     zfrsea=(1.0_realkind-frland(jl))*(1.0_realkind-frice(jl))
+
+     !     sg first fraction of ice (of the whole gridsquare)
+
+     zfrice=frice(jl)*(1.0_realkind-frland(jl))
+
+     !     sg  snowfree ice (of the whole gridsquare)
+
+     zfricens=zfrice*(1.0_realkind-frsnice(jl))
+
+     !     sg  snowice (of the whole gridsquare)
+
+     zfricesn=zfrice*frsnice(jl)
+
+     if( zfricens>zfrlim ) then
+        zicenson=1.0_realkind
+        zicensoff=0.0_realkind
+     else
+        zicenson=0.0_realkind
+        zicensoff=1.0_realkind
+     endif
+     ncounttice=nint(lcounttice(jl))
+
+     ncounttice=min(ncounttice,2)
+
+     jqlake=max(ncounttice-1,0)
+
+     zqam=max( q(jl,nlev),zqlim )
+
+     zlatcn=cos(ziclatn*pi/180.0_realkind)
+     zlatcs=cos(ziclats*pi/180.0_realkind)
+
+     nbaltic=0
+     if (coslat(jl)<zlatcs.and.coslat(jl)>zlatcn.and.&
+          along(jl)<ziclone.and.along(jl)>ziclonw) &
+          nbaltic=1
+
+     !     zicenson=0 means that computations are not used
+
+     ztsi = zicenson*min(tice(jl),tseafr) +ztdum*zicensoff
+
+     zdens=dph(jl,nlev+1)/gpot(jl,nlev)
+
+     !     roughness for ice
+
+     zrous=wrous(2)
+
+     zqseff=zepcr*esati(ztsi)/(ps(jl) -(1.0_realkind-epsilo)*zcrit*esati(ztsi))
+     zwet=1.0_realkind
+     zvirnl=1.0_realkind+zcrdq*zqam
+     zdup2=max( u(jl,nlev)**2 + v(jl,nlev)**2,zueps )
+     zvel=sqrt(zdup2)
+
+     !   log(hybf(nlev))= ln(pf(nlev))-ln(psm) => z03=-fi/(t*v**2)
+
+     z03=rair*clog/zdup2
+     zriq =-z03*( gpot(jl,nlev)/(cpair+zcons1*zqam) + &
+          zvirnl*t(jl,nlev) )
+
+     !     z/z0+1 = (rough(jl)+zhnlev)/rough(jl) ; z=height of level nlev
+
+     zslask=(zrous+zhnlev)/zrous
+     z01=1.0_realkind/(log(zslask))**2
+     z02=sqrt(zslask)*z01
+     zcneut=z01*(carman**2)
+
+
+     !         calculation of richardson number ( zri ) for surface
+     !         temperature ztsi.
+
+
+     ztseff=ztsi
+
+     zri=zriq + z03 *( 1.0_realkind+zcrdq*zqseff)*ztseff
+
+
+     !     zstaon=0 if zri<=0.0_realkind
+
+     if( zri>0.0_realkind ) then
+        zstaon=1.0_realkind
+        zstaoff=0.0_realkind
+     else
+        zstaon=0.0_realkind
+        zstaoff=1.0_realkind
+     endif
+
+     zria=abs(zri)
+
+     !     stable richardson number > 0.0_realkind
+     !     (formulae according to louis et al,1982)
+
+     zdr=2.0_realkind*zqb*zria/sqrt(1.0_realkind +zqd*zria)
+     zcdrag=zcneut/( 1.0_realkind +zdr )
+     zdr=2.0_realkind*zqb*zria*sqrt(1.0_realkind +zqdh*zria)
+     zcdrgh=zcneut/( 1.0_realkind +zdr )
+
+     !     unstable richardson number
+     !     (louis et al,1982: ecmwf)
+
+     zfmx=zqb*zria/(1.0_realkind+z02*zcams3*sqrt(zria))
+     zslask=zcneut*(1.0_realkind+3.0_realkind*zfmx)
+     zcdrag=zstaoff*zcneut*(1.0_realkind+2.0_realkind*zfmx) +zstaon*zcdrag
+     zcdrgh=zstaoff*zslask +zstaon*zcdrgh
+
+     !     aerodynamic resistance for heat='zra'
+     !     ( computation not used if zicensoff=1.0_realkind)
+
+
+     zra=zicenson/(zcdrgh*zvel) +zicensoff
+
+     !     specific humidity at the lowest model layer.
+
+     ztam=t(jl,nlev)+gpot(jl,nlev)/cpair
+
+
+     zlat = latvap+latice
+
+     !     sensible and latent heat fluxes over ice.
+
+     zh=-zdens/zra*cpair*(ztsi-ztam)
+     ze=-zdens/zra*(zqseff-zqam)*zlat
+     zqs=zqseff                    
+
+     !     calculation of t2m,q2m over ice area 
+     !     wind components must not be zero.
+
+
+     if( u(jl,nlev)<0.0_realkind ) then
+        zuneg=1.0_realkind
+        zupos=0.0_realkind
+     else
+        zuneg=0.0_realkind
+        zupos=1.0_realkind
+     endif
+
+     zunlev=zuneg*min(u(jl,nlev),-zueps)+ zupos*max(u(jl,nlev),zueps)
+
+     if( v(jl,nlev)<0.0_realkind ) then
+        zvneg=1.0_realkind
+        zvpos=0.0_realkind
+     else
+        zvneg=0.0_realkind
+        zvpos=1.0_realkind
+     endif
+
+     zvnlev=zvneg*min(v(jl,nlev),-zueps)+zvpos*max(v(jl,nlev),zueps)
+
+     !     avoid values of rougness > 2m
+
+     zrougl=min( zrous,z2m )
+
+     zustar=sqrt(zcdrag*zdup2)
+     !     autido060523      zustar=max(zustar,0.0_realkind1)
+     zustar=max(zustar,0.03_realkind)
+
+     !     update area averaged friction velocity.
+
+     ustari(jl)=zustar*zustar*zicenson
+     ustari(jl)=sqrt(ustari(jl))
+
+     ztotf=zh +zsl11*t(jl,nlev)*ze/zlat
+     zmoin=zsl1*ztotf/( 2.0_realkind*(ps(jl)-dph(jl,nlev+1))*zustar**3 )
+
+     zl2=z2m*zmoin
+     zl2=max( zl2, zl2lim )
+
+     zln2=log(z2m/zrougl)
+     zln2k=zln2*zrkar
+
+     !     compute ustar and vstar
+
+     zust=zustar*zunlev/zvel
+     zvst=zustar*zvnlev/zvel
+
+     !     compute 't*','q*' (zthst,zqstar)
+
+     zthst=zh/(cpair*zdens*zustar)
+     zqstar=ze/(zlat*zdens*zustar)
+
+     !     stable case zunson=0, unstable zunson=1
+
+     if( ztotf<0.0_realkind ) then
+        zunson=1.0_realkind
+        zunsoff=0.0_realkind
+     else
+        zunson=0.0_realkind
+        zunsoff=1.0_realkind
+     endif
+
+     !     zt2m etc dummy if zunson=1
+
+     zslask=max(-89._realkind,zicenson*( zunson + zunsoff*(-zhm*zthst*zl2/ztam) ) +zicensoff)
+
+     zt2m=ztseff +zthst*zln2k +(ztam-ztseff)*(1.0_realkind- exp(zslask) )
+     zslask=max(-89._realkind,zicenson*( zunson + zunsoff*(-zq*zqstar*zl2/zqam) ) +zicensoff)
+     zq2m=zqs +zqstar*zln2k +(zqam-zqs)*(1.0_realkind- exp(zslask) )
+
+     !     zy2 dummy if zunson=0
+
+     zy=sqrt( 1.0_realkind - 9.0_realkind*zl2*zunson )
+     zy=min( zy, sqrt( 8.0_realkind/zrougl ) -1.0_realkind )
+     zy2=zunson*zy +zunsoff
+     zy2=zy2*zicenson +zicensoff
+
+     zpar= ( zln2-2.0_realkind*log( 0.5_realkind*(1.0_realkind+zy2)) )*zrkar
+     t2mi(jl)=( zunson*(ztseff+zthst*zpar) + zunsoff*zt2m )*zicenson
+     q2mi(jl)=( zunson*(zqs+zqstar*zpar) + zunsoff*zq2m )*zicenson
+     q2mi(jl)=max(q2mi(jl),0.0_realkind)
+
+
+     if(q2mi(jl)>0.0_realkind) then
+        rh2mi(jl)=q2e(ps(jl),q2mi(jl))/t2es(t2mi(jl))
+     else
+        rh2mi(jl)=0.0_realkind
+     endif
+     rh2mi(jl)=min(max(rh2mi(jl),0.0_realkind),1.0_realkind)
+
+
+     !---- new by anna to have values of wind over ice
+
+     zl10=z10m*zmoin
+     zln10=log(z10m/zrougl)
+     zln10k=zln10*zrkar
+
+     !     zu10 etc dummy if zunson=1.0_realkind
+
+     zslask=max(-89._realkind,zunson + zunsoff*(-zm*zust*zl10/zunlev))
+     zu10=zust*zln10k + zunlev*(1.0_realkind-exp(zslask))
+     zslask=max(-89._realkind,zunson + zunsoff*(-zm*zvst*zl10/zvnlev))
+     zv10=zvst*zln10k + zvnlev*(1.0_realkind-exp(zslask))
+
+     !     zx10 dummy if zunson=0
+
+     zx10=zunson*(1.0_realkind-15._realkind*zl10) + zunsoff
+     zx10=sqrt(sqrt(zx10))
+
+     zpar=(zln10 - (log( 0.5_realkind*(1.0_realkind+zx10*zx10) )+ 2.0_realkind* &
+          ( log( 0.5_realkind*(1.0_realkind+zx10))-atan(zx10)+zrpi4 )) )*zrkar
+
+     u10mi(jl)=( zunson*zust*zpar + zunsoff*zu10 )*zicenson
+     v10mi(jl)=( zunson*zvst*zpar + zunsoff*zv10 )*zicenson
+     momfui(jl)=zdens*zustar*zustar*u(jl,nlev)/(zvel+zsecu)*zicenson
+     momfvi(jl)=zdens*zustar*zustar*v(jl,nlev)/(zvel+zsecu)*zicenson
+
+
+     senfi(jl)=zh*zicenson
+     latfi(jl)=ze*zicenson
+     ztemp=-zdens/zra
+
+     !     evaporation from ice [kg/m2 or mm per time step]
+     evapi(jl)=-latfi(jl)/zlat*dtime
+
+
+
+
+     !     3.3  radiation computations over ice part
+
+
+     !     compute radf for ice, assuming longwave radiation towards
+     !     surface is the same as that of whole gridsquare
+
+     zscos=0.2_realkind/(1.0_realkind+scos(jl)) - 0.1_realkind
+     zalb = albedo(jl) + zscos                   
+     zrads=sswdn(jl)
+
+     zradf = radf(jl)-zrads*(1.0_realkind-zalb)
+
+     !     shall be replaced with albice(jl) from doesher from oceanographic model
+     !     and also from probe-baltic and lakes
+
+     if(ncounttice==0)then
+        zalbice = albicenl(jl) + zscos                   
+     else
+        zalbice = albice  +  zscos
+     endif
+     sswri(jl) = (1.0_realkind-zalbice)*zrads*zicenson
+
+     !     zradl is downward long wave radiation (common for all surfaces)
+
+     zradl = zradf/emskin(jl) + stebol*tskin(jl)**4
+     slwri(jl)=emice*(zradl-stebol*ztsi**4)*zicenson 
+
+
+
+     !     estimate the flux between the water and ice at the bottom
+     !     zqbottom=const*(tsea-tfp), tfp(freezing point) is a function of
+     !     salinity, about -0.3 c in the baltic and -1.865 c elsewhere
+     !     for lakes use 0
+
+     zd2=0.43_realkind*real(nbaltic,realkind)+0.93_realkind*&
+          (1.0_realkind-real(nbaltic,realkind))
+     ztfp=tmelt-real(nbaltic,realkind)*0.3_realkind-&
+          (1.0_realkind-real(nbaltic,realkind))*1.865_realkind
+
+     !     sg  in case of icethick < 0.0_realkind8 put zd1=0.0_realkind7 and zd2=0.0_realkind1
+
+     zd2=(1.0_realkind-real(jqlake,realkind))*zd2+real(jqlake,realkind)*(max(icethick(jl)-0.07_realkind,0.01_realkind))
+
+     !     sg    put tsea to tmelt for lakes
+
+     ztfp=(1.0_realkind-real(jqlake,realkind))*ztfp + real(jqlake,realkind)*tmelt
+     !     ps100505       zslask=273.15-nbaltic*0.4-(1-nbaltic)*1.8
+     !     ps100505       zslask=(1-jqlake)*zslask+jqlake*273.15
+     !     ps100505       zslask=max(tsea(jl),zslask)
+     !     ps100505       zqbottom=1.17*(zslask-ztfp)
+     zqbottom=2.0_realkind*(ztfp-ticed(jl))
+
+
+
+     !     3.4  calculation of tice 
+
+
+     !     calculate modicications of latent heat flux due to precipitation
+
+     !     dsnowdt melting on zero degree ice (probably wet surface)
+
+     zmelbsi = dsnowdt(jl)
+     if(tice(jl)<ztmelt)zmelbsi=0.0_realkind
+
+     !     draindt freezing on cold ice
+
+     zfzbr = draindt(jl)       
+     if(tice(jl)>=ztmelt) zfzbr=0.0_realkind
+     zflx=senfi(jl)+latfi(jl) + latice*(zfzbr-zmelbsi) +&
+          sswri(jl)+slwri(jl)
+
+     zdbnet= -4._realkind*stebol*emice*tice(jl)**3
+     zdflx=ztemp*(cpair + zlat*desdti(tice(jl))/(ps(jl)*zrepac) )+ zdbnet
+     zdflx=zdflx*zicenson
+!!$     if(lprint2)write(349,'(a,i5,20(1pe12.4))')'slflu_1',kstep, &
+!!$          zflx,zdflx,senfi(jl),latfi(jl),sswri(jl),slwri(jl),    &
+!!$          tice(jl),ticed(jl),tsea(jl),zqbottom,                  &
+!!$          frice(jl),frsnice(jl),snice(jl),swsnice(jl)
+
+     !     solve for zticep,zticedp 
+
+     zctd=1.0_realkind/(zd2*zrocg)
+     zkdf=2.0_realkind*ztlamda/(zd1+zd2)
+     zslask2=0.5_realkind*dtime*zctd
+
+     wa(1)=0.0_realkind
+     wb(1) = 1.0_realkind-zslask1*(zdflx-zkdf)
+     wc(1) = -zslask1*zkdf
+     wr(1) = tice(jl)*(1.0_realkind-zslask1*(zdflx+zkdf))+ & 
+          zslask1*(2.0_realkind*zflx+zkdf*ticed(jl))
+
+     wa(2) = -zslask2*zkdf
+     wb(2) = 1.0_realkind+zslask2*zkdf
+     wc(2) = 0.0_realkind
+     wr(2) = ticed(jl)*(1.0_realkind-zslask2*zkdf) +&
+          zslask2*(tice(jl)*zkdf+2.0_realkind*zqbottom)
+
+     call tridag(wa,wb,wc,wr,wtemp,2)
+
+     zticep=wtemp(1)
+     zticedp=wtemp(2)
+     zticep=min(zticep,tmelt)*zicenson+tice(jl)*zicensoff
+     zticedp=min(zticedp,tmelt)*zicenson+ticed(jl)*zicensoff
+
+     zsnstp=snice(jl)+zrsfl*(1.0_realkind-frsnice(jl))*(dsnowdt(jl)+zfzbr-zmelbsi) 
+     zsnstp=max(zsnstp,0.0_realkind)
+     zsnicep=zsnstp
+!!$     if(lprint2)write(349,'(a,i5,20(1pe12.4))')'slflu_2',kstep, &
+!!$          zticep,zticedp,zsnicep,zfricesn
+
+     !     3.5 snow on ice
+
+
+     zicesnon=0.0_realkind
+     zicesnoff=1.0_realkind
+     zsninv=0.0_realkind
+
+     !     define variables to be used also outside snow loop
+
+     zfzsnr=0.0_realkind
+     zlatfsn=0.0_realkind
+     zevapsn=0.0_realkind
+     !     dummy
+     zlatsn=1.0_realkind
+     zsnmel=0.0_realkind
+     zsn2sw=0.0_realkind
+
+
+
+     if(zfricesn>zfrlim) then
+
+        !     in this case frsnice(jl)>0.0_realkind
+
+        zsninv=1.0_realkind/frsnice(jl)
+
+
+
+        zicesnon=1.0_realkind
+        zicesnoff=0.0_realkind
+        zswsnice=max(swsnice(jl),0.0_realkind)
+        zalbsnice=albsnice(jl)
+
+        ztsnice=tsnice(jl)
+        zticesn=ticesn(jl)
+        zticesnd=ticesnd(jl)
+
+        !     zero degree snow
+
+        if(ztsnice>=ztmelt)zlat=latvap 
+        zlatsn=zlat
+
+        !     zicesnon=0 means that computations are not used
+
+        ztsi = zicesnon*min(ztsnice,ztmelt) +ztdum*zicesnoff
+
+        !     roughness for snow on ice
+
+        zrous=wrous(6)
+
+        zqseff=zepcr*esati(ztsi)/(ps(jl) -(1.0_realkind-epsilo)*zcrit*esati(ztsi))
+        zwet=1.0_realkind
+        zvirnl=1.0_realkind+zcrdq*zqam
+
+        zslask=(zrous+zhnlev)/zrous
+        z01=1.0_realkind/(log(zslask))**2_realkind
+        z02=sqrt(zslask)*z01
+        zcneut=z01*(carman**2_realkind)
+
+
+        !         calculation of richardson number ( zri ) for surface
+        !         temperature ztsi.
+
+
+        ztseff=ztsi
+
+        zri=zriq + z03 *( 1.0_realkind+zcrdq*zqseff)*ztseff
+
+        !     ps
+        !     zstaon=0 if zri<=0.0_realkind
+
+        if( zri>0.0_realkind ) then
+           zstaon=1.0_realkind
+           zstaoff=0.0_realkind
+        else
+           zstaon=0.0_realkind
+           zstaoff=1.0_realkind
+        endif
+
+        zria=abs(zri)
+
+        !     stable richardson number > 0.
+        !     (formulae according to louis et al,1982)
+
+        zdr=2.0_realkind*zqb*zria/sqrt(1.0_realkind +zqd*zria)
+        zcdrag=zcneut/( 1.0_realkind +zdr )
+        zdr=2.0_realkind*zqb*zria*sqrt(1.0_realkind +zqdh*zria)
+        zcdrgh=zcneut/( 1.0_realkind +zdr )
+
+        !     unstable richardson number
+        !     (louis et al,1982: ecmwf)
+
+        zfmx=zqb*zria/(1.0_realkind+z02*zcams3*sqrt(zria))
+        zslask=zcneut*(1.0_realkind+3.0_realkind*zfmx)
+        zcdrag=zstaoff*zcneut*(1.0_realkind+2.0_realkind*zfmx) +zstaon*zcdrag
+        zcdrgh=zstaoff*zslask +zstaon*zcdrgh
+
+        !     aerodynamic resistance for heat='zra'
+        !     ( computation not used if zicesnoff=1.0_realkind)
+
+
+        zra=zicesnon/(zcdrgh*zvel) +zicesnoff
+
+        !     sensible and latent heat fluxes over snow on ice.
+
+        zh=-zdens/zra*cpair*(ztsi-ztam)
+        ze=-zdens/zra*(zqseff-zqam)*zlat
+        zqs=zqseff                    
+
+        !     calculation of t2m,q2m over snow on ice 
+
+        !     avoid values of rougness > 2m
+
+        zrougl=min( zrous,z2m )
+
+        zustar=sqrt(zcdrag*zdup2)
+        !     autido060523      zustar=max(zustar,0.0_realkind1)
+        zustar=max(zustar,0.03_realkind)
+
+        !     update area averaged friction velocity over whole ice.
+
+        ustari(jl)=(1.0_realkind-frsnice(jl))*ustari(jl)*ustari(jl)+ &
+             frsnice(jl)*zustar*zustar
+        ustari(jl)=sqrt(ustari(jl))
+
+        ztotf=zh +zsl11*t(jl,nlev)*ze/zlat
+        zmoin=zsl1*ztotf/( 2.0_realkind*(ps(jl)-dph(jl,nlev+1))*zustar**3 )
+
+        zl2=z2m*zmoin
+        zl2=max( zl2, zl2lim )
+
+        zln2=log(z2m/zrougl)
+        zln2k=zln2*zrkar
+
+        !     compute ustar and vstar
+
+        zust=zustar*zunlev/zvel
+        zvst=zustar*zvnlev/zvel
+
+        !     compute 't*','q*' (zthst,zqstar)
+
+        zthst=zh/(cpair*zdens*zustar)
+        zqstar=ze/(zlat*zdens*zustar)
+
+        !     stable case zunson=0, unstable zunson=1
+
+        if( ztotf<0.0_realkind ) then
+           zunson=1.0_realkind
+           zunsoff=0.0_realkind
+        else
+           zunson=0.0_realkind
+           zunsoff=1.0_realkind
+        endif
+
+        !     zt2m etc dummy if zunson=1
+
+        zslask=max(-89._realkind,zicesnon*( zunson + zunsoff*(-zhm*zthst*zl2/ztam))+zicesnoff)
+        zt2m=ztseff +zthst*zln2k +(ztam-ztseff)*(1.0_realkind- exp(zslask) )
+        zslask=max(-89._realkind,zicesnon*( zunson + zunsoff*(-zq*zqstar*zl2/zqam))+zicesnoff)
+        zq2m=zqs +zqstar*zln2k + (zqam-zqs)*(1.0_realkind- exp(zslask) )
+
+        !     zy2 dummy if zunson=0
+
+        zy=sqrt( 1.0_realkind - 9.0_realkind*zl2*zunson )
+        zy=min( zy, sqrt( 8.0_realkind/zrougl ) -1.0_realkind )
+        zy2=zunson*zy +zunsoff
+        zy2=zy2*zicesnon +zicesnoff
+
+        zpar= ( zln2-2.0_realkind*log( 0.5_realkind*(1.0_realkind+zy2)) )*zrkar
+        zt2m=( zunson*(ztseff+zthst*zpar) +  zunsoff*zt2m )*zicesnon
+        zq2m=( zunson*(zqs+zqstar*zpar) +  zunsoff*zq2m )*zicesnon
+        zq2m=max(zq2m,0.0_realkind)
+
+
+        if(zq2m>0.0_realkind) then
+           zrh2m=q2e(ps(jl),zq2m)/t2es(zt2m)
+        else
+           zrh2m=0.0_realkind
+        endif
+        zrh2m=min(max(zrh2m,0.0_realkind),1.0_realkind)
+
+
+        !---- new by anna to have values of wind over snow over ice
+
+        zl10=z10m*zmoin
+        zln10=log(z10m/zrougl)
+        zln10k=zln10*zrkar
+
+        !     zu10 etc dummy if zunson=1.0_realkind
+
+        zslask=max(-89._realkind,zunson + zunsoff*(-zm*zust*zl10/zunlev))
+        zu10=zust*zln10k + zunlev*(1.0_realkind-exp(zslask))
+        zslask=max(-89._realkind,zunson + zunsoff*(-zm*zvst*zl10/zvnlev))
+        zv10=zvst*zln10k + zvnlev*(1.0_realkind-exp(zslask))
+
+        !     zx10 dummy if zunson=0
+
+        zx10=zunson*(1.0_realkind-15._realkind*zl10) + zunsoff
+        zx10=sqrt(sqrt(zx10))
+
+        zpar=(zln10 - (log( 0.5_realkind*(1.0_realkind+zx10*zx10) )+ 2.0_realkind* &
+             ( log( 0.5_realkind*(1.0_realkind+zx10))-atan(zx10)+zrpi4 )) )*zrkar
+
+        zu10msn=( zunson*zust*zpar + zunsoff*zu10 )*zicesnon
+        zv10msn=( zunson*zvst*zpar + zunsoff*zv10 )*zicesnon
+        zmomfusn=zdens*zustar*zustar*u(jl,nlev)/(zvel+zsecu)*zicesnon
+        zmomfvsn=zdens*zustar*zustar*v(jl,nlev)/(zvel+zsecu)*zicesnon
+
+
+        zsenfsn=zh*zicesnon
+        zlatfsn=ze*zicesnon
+        ztemp=-zdens/zra
+
+        !     evaporation from snow on ice [kg/m2 or mm per time step]
+        zevapsn=-zlatfsn/zlat*dtime
+
+
+
+
+        !     3.6  radiation computations over snow-ice part
+
+
+        !     compute radf for snow on ice, assuming longwave radiation towards
+        !     surface is the same as that of whole gridsquare
+
+        !     shall be replaced with albice(jl) from doesher from oceanographic model
+        !     and also from probe-baltic and lakes
+
+        if(ncounttice==0)then
+           zalbice = albicenl(jl) + zscos                   
+        else
+           zalbice = albsnice(jl)  +  zscos
+        endif
+        zsswri = (1.0_realkind-zalbice)*zrads*zicesnon
+
+        !     zradl is downward long wave radiation (common for all surfaces)
+
+        zslwri =emice*(zradl-stebol*ztsi**4)*zicesnon 
+
+
+        !     3.6.5  compute average values over ice + snow on ice
+
+
+        u10mi(jl)=(1.0_realkind-frsnice(jl))*u10mi(jl) + frsnice(jl)*zu10msn
+        v10mi(jl)=(1.0_realkind-frsnice(jl))*v10mi(jl) + frsnice(jl)*zv10msn
+        momfui(jl)=(1.0_realkind-frsnice(jl))*momfui(jl) + frsnice(jl)*zmomfusn
+        momfvi(jl)=(1.0_realkind-frsnice(jl))*momfvi(jl) + frsnice(jl)*zmomfvsn
+        t2mi(jl)=(1.0_realkind-frsnice(jl))*t2mi(jl) + frsnice(jl)*zt2m
+        q2mi(jl)=(1.0_realkind-frsnice(jl))*q2mi(jl) + frsnice(jl)*zq2m
+        rh2mi(jl)=(1.0_realkind-frsnice(jl))*rh2mi(jl) + frsnice(jl)*zrh2m
+        senfi(jl)=(1.0_realkind-frsnice(jl))*senfi(jl) + frsnice(jl)*zsenfsn
+        latfi(jl)=(1.0_realkind-frsnice(jl))*latfi(jl) + frsnice(jl)*zlatfsn
+        sswri(jl)=(1.0_realkind-frsnice(jl))*sswri(jl) + frsnice(jl)*zsswri
+        slwri(jl)=(1.0_realkind-frsnice(jl))*slwri(jl) + frsnice(jl)*zslwri
+        evapi(jl)=(1.0_realkind-frsnice(jl))*evapi(jl) + frsnice(jl)*zevapsn
+
+        !     runoff [mm per time step] from probe lakes
+
+        if(nint(lcounttice(jl))==2)then
+           accrunofflake(jl)=accrunofflake(jl)+ &
+                ( (draindt(jl)+dsnowdt(jl))*dtime- &
+                evaps(jl)*(1.0_realkind-frice(jl))-evapi(jl)*frice(jl) )* &
+                (1.0_realkind-frland(jl))
+        endif
+
+
+        !     3.7  calculation of tsnice etc.
+
+
+
+        !     calculate modicications of latent heat flux due to precipitation
+
+        !     dsnowdt melting on zero degree snow (probably wet surface)
+
+        zmelbs = dsnowdt(jl)
+        if(ztsnice<ztmelt)zmelbs=0.0_realkind
+
+        !     draindt falling on zero-degree snow
+
+        zfzr2sn = draindt(jl)
+        !     ps040611      if(ztsnice>ztmelt) zfzr2sn=0.0_realkind
+        if(ztsnice<ztmelt) zfzr2sn=0.0_realkind
+
+        !     draindt freezing on cold snow
+
+        zfzsnr = draindt(jl)-zfzr2sn       
+
+        zflx=zsenfsn+zlatfsn + latice*(zfzsnr-zmelbs) +           &
+             zsswri+zslwri                                               
+
+        zdbnet= -4._realkind*stebol*emsnow*ztsnice**3                        
+        zdflx=ztemp*(                                              &
+             cpair                                                 &
+             + zlat*desdti(ztsnice)/(ps(jl)*zrepac) )              &
+             + zdbnet                                               
+        zdflx=zdflx*zicesnon                                        
+!!$        if(lprint2)write(349,'(a,i5,20(1pe12.4))')'slflu_3',kstep, &
+!!$             zflx,zdflx,zsenfsn,zlatfsn,zfzsnr,zmelbs,             &
+!!$             zradl,emice,ztsi,zrads,zalbice,zsswri,zslwri
+
+        !     calculate snowdepth
+
+        !     depth in water equivalent:
+
+        zsndepth=snice(jl)*zsninv
+        zsndinv=0.0_realkind
+        if(zsndepth>0.0_realkind)zsndinv=1.0_realkind/zsndepth
+        zrhosn=rhosnice(jl)
+
+        !     depth in snow:
+
+        dzsnowice(jl)=rhoh2o/zrhosn*zsndepth
+        dzsnowice(jl)=min(10.0_realkind,dzsnowice(jl))
+        zdsnst=max(min(dzsnowice(jl),zsnlayer),0.001_realkind)
+        c1=zrocg*zrhosn/rhoice*zdsnst
+
+        ztlamdasn=ztlamda*(zrhosn/rhoice)**1.88_realkind
+        zrssn=0.5_realkind*dzsnowice(jl)/ztlamdasn + 0.5_realkind*zd1/ztlamda
+        zrsinv=1.0_realkind/zrssn
+
+        !     total flux available for the snow
+
+        zsurfsntot=zflx-(ztsnice-zticesn)*zrsinv
+!!$        if(lprint2)write(349,'(a,i5,20(1pe12.4))')'slflu_4',kstep, &
+!!$             snice(jl),zsninv,zrhosn,dzsnowice(jl),zdsnst,zrocg,zrssn,c1, &
+!!$             zsurfsntot
+
+        !     check cases
+
+
+        !     total heat flux is positive
+
+        if(zsurfsntot>=1.e-3_realkind)then
+
+
+           !        estimate the time step needed to bring tsnice to ztmelt
+
+           zdelta1t=max((c1*(ztmelt-ztsnice))/zsurfsntot,0.0_realkind)
+
+           !     no phase change, temperature rising
+
+           if(zdelta1t>=dtime)then
+              zdelta1t=dtime
+              zdelta2t=0.0_realkind
+           else
+
+              !     temperature risning and/or melting
+
+              zdelta2t=dtime-zdelta1t
+
+              !     estimate snow melt amount
+
+              zsnmel=zdelta2t/(rhoh2o*latice)*zsurfsntot
+              zsnmel=max(zsnmel,0.0_realkind)
+
+
+           endif
+
+           !     rain that falls on zero-degree snow has not been included
+           !     elsewhere.
+
+           zrain2snow=zfzr2sn*zrsfl
+
+        endif
+
+        !     total heat flux is negative
+
+        if(zsurfsntot<=-1.e-03_realkind)then
+
+
+           !     freezing and/or temperature sinking
+
+           zswsncr=zswsnice*zsninv
+           zslask=zswsncr+zfzr2sn*zrsfl
+           zswsnice=min(zslask,zsndepth*zwsat)
+           zrain2snow=max(0.0_realkind,zslask-zswsnice)
+
+           !     here zswsnice is back to mean value over all ice area
+
+           zswsnice=zslask*frsnice(jl)
+
+
+           jq=1
+           if((zeps-zswsncr)>=0.0_realkind)jq=0
+
+           zslask=real(jq,realkind) * 1.0_realkind/(zswsncr+real(1-jq,realkind)) 
+           zslask=min(zsncrit*zrhosn*zwsat*zslask/rhoh2o,1.0_realkind)
+           zfreezefrac=max(zslask,0.0_realkind)
+           zdelta2t=zfreezefrac*dtime
+
+           !     be sure to freeze the last water if very little water left
+
+           if(zswsncr<zsnswcrit) then      
+
+              zdelta2t=-rhoh2o*latice*zswsncr/zsurfsntot
+              zdelta2t=min(zdelta2t,dtime)
+
+           endif
+
+           !     amount of freezed water = negative snow melt
+
+           zsnmel=zdelta2t*zsurfsntot/(rhoh2o*latice)
+
+           !     use only zdelta2t until all is frozen
+
+
+           if(-zsnmel>zswsncr) then
+              zdelta2t=-zdelta2t*zswsncr/zsnmel
+              zsnmel=zdelta2t*zsurfsntot/(rhoh2o*latice)
+           endif
+
+
+           zdelta2t=min(zdelta2t,dtime)
+           zdelta1t=dtime-zdelta2t
+           zsnmel=min(zsnmel,0.0_realkind)
+        endif
+
+
+        if(abs(zsurfsntot)<1.e-3_realkind)then
+
+           zdelta1t=0.0_realkind
+           zdelta2t=dtime
+           zsnmel=0.0_realkind
+           zrain2snow=zfzr2sn*zrsfl
+
+        endif
+
+
+        !     solve snow eq implicitely including heat conduction
+
+
+        zdelta1t=zdelta1t/2.0_realkind
+        zdelta2t=zdelta2t/2.0_realkind
+
+
+        !         2-layer case computed before 3-layer case only if freezing
+
+
+        if(zsnmel<0.0_realkind.and.zdelta2t>0.0_realkind)then
+
+           !     ticesn-equation
+
+           zslask=zdelta2t*zct
+
+           wa(1) = 0.0_realkind
+           wb(1) = 1.0_realkind+zslask*(zrsinv+zkdf)
+           wc(1) = -zslask*zkdf
+           wr(1) = zticesn*(1.0_realkind-zslask*(zrsinv+zkdf)) + &
+                zslask*(zkdf*zticesnd+2.0_realkind*zrsinv*ztsnice)
+
+           !     ticesnd-equation
+
+           zslask=zdelta2t*zctd
+
+           wa(2) = -zslask*zkdf
+           wb(2) = 1.0_realkind+zslask*zkdf
+           wc(2) = 0.0_realkind
+           wr(2) = zticesnd*(1.0_realkind-zslask*zkdf) +     &
+                zslask*(ztsnice*zkdf + 2.0_realkind*zqbottom)
+
+           call tridag(wa,wb,wc,wr,wtemp,2)
+           zticesnp=wtemp(1)
+           zticesndp=wtemp(2)
+           zticesnp=min(zticesnp,tmelt)*zicesnon+zticesn*zicesnoff
+           zticesndp=min(zticesndp,tmelt)*zicesnon+zticesnd*zicesnoff
+
+           zticesn=zticesnp
+           zticesnd=zticesndp
+
+           !     put tsnice(jl) back again in ztsnicep 
+
+           ztsnicep=ztsnice
+
+        endif
+
+        !         3-layer case
+
+
+!!$        if(lprint2)write(349,'(a,i5,20(1pe12.4))')'slflu_5',kstep, &
+!!$             zdelta1t,c1,zflx,zdflx,zrsinv,zkdf,zqbottom,ztsnice,   &
+!!$             zticesn,zticesnd
+        if(zdelta1t>0.0_realkind)then            
+
+           !     tsnice-equation
+
+           zslask=zdelta1t/c1
+
+           wa(1) = 0.0_realkind
+           wb(1) = 1.0_realkind-zslask*(zdflx-zrsinv)
+           wc(1) = -zslask*zrsinv
+           wr(1) = ztsnice*(1.0_realkind-zslask*(zdflx + zrsinv)) &
+                + zslask*(2.0_realkind*zflx + zrsinv*zticesn)
+
+           !     ticesn-equation
+
+           zslask=zdelta1t*zct
+
+           wa(2) = -zslask*zrsinv
+           wb(2) = 1.0_realkind+zslask*(zkdf+zrsinv)
+           wc(2) = -zslask*zkdf
+           wr(2) = zticesn*(1.0_realkind-zslask*(zkdf+zrsinv)) &
+                + zslask*(zkdf*zticesnd+zrsinv*ztsnice)
+
+           !     ticesnd-equation
+
+           zslask=zdelta1t*zctd
+
+           wa(3) = -zslask*zkdf
+           wb(3) = 1.0_realkind+zslask*zkdf
+           wc(3) = 0.0_realkind
+           wr(3) = zticesnd*(1.0_realkind-zslask*zkdf) + &
+                zslask*(zticesn*zkdf + 2.0_realkind*zqbottom)
+
+           call tridag(wa,wb,wc,wr,wtemp,3)
+
+           ztsnicep=wtemp(1)
+           zticesnp=wtemp(2)
+           zticesndp=wtemp(3)
+           ztsnicep=min(ztsnicep,tmelt)*zicesnon+zticesn*zicesnoff
+           zticesnp=min(zticesnp,tmelt)*zicesnon+zticesn*zicesnoff
+           zticesndp=min(zticesndp,tmelt)*zicesnon+zticesnd*zicesnoff
+
+!!$           if(lprint2)write(349,'(a,i5,20(1pe12.4))')'slflu_6',kstep, &
+!!$                ztsnicep,zticesnp,zticesndp 
+           ztsnice=ztsnicep
+           zticesn=zticesnp
+           zticesnd=zticesndp
+
+        endif
+
+
+        !         2-layer case computed after 3-layer case only if melting
+
+
+        !     also the case where zsurfsntot is small is computed here
+        !     (zsnmel=0)
+
+        if(zsnmel>=0.0_realkind.and.zdelta2t>0.0_realkind)then
+
+           !     ticesn-equation
+
+           zslask=zdelta2t*zct
+
+           wa(1) = 0.0_realkind
+           wb(1) = 1.0_realkind+zslask*(zrsinv+zkdf)
+           wc(1) = -zslask*zkdf
+           wr(1) = zticesn*(1.0_realkind-zslask*(zrsinv+zkdf)) + &
+                zslask*(zkdf*zticesnd+2.0_realkind*zrsinv*ztsnice)
+
+           !     ticesnd-equation
+
+           zslask=zdelta2t*zctd
+
+           wa(2) = -zslask*zkdf
+           wb(2) = 1.0_realkind+zslask*zkdf
+           wc(2) = 0.0_realkind
+           wr(2) = zticesnd*(1.0_realkind-zslask*zkdf) + &
+                zslask*(zticesn*zkdf + 2.0_realkind*zqbottom)
+
+           call tridag(wa,wb,wc,wr,wtemp,2)
+           zticesnp=wtemp(1)
+           zticesndp=wtemp(2)
+           zticesnp=min(zticesnp,tmelt)*zicesnon+zticesn*zicesnoff
+           zticesndp=min(zticesndp,tmelt)*zicesnon+zticesnd*zicesnoff
+
+           ztsnicep=ztsnice
+
+        endif
+
+
+        !        new snow amount
+
+        zsnstp=zsnstp + zrsfl*frsnice(jl)*(dsnowdt(jl)+zfzsnr+ &
+             zlatfsn/zlatsn)
+        zsnstp=max(zsnstp,0.0_realkind)
+        zsnstp=zsnstp-frsnice(jl)*zsnmel
+
+        !     here zsnicep is without water in the snow
+
+        zsnicep=zsnstp-zswsnice
+
+        !     new snow water amount
+
+        zswsnicep=zswsnice + frsnice(jl)*(zsnmel+zrain2snow)
+        zsn2sw=zswsnicep
+        zswsnicep=min(zswsnicep,zwsat*zsnicep)
+        zswsnicep=max(zswsnicep,0.0_realkind)      
+
+        zsn2sw=max(zsn2sw-zswsnicep,0.0_realkind)
+
+        zrhodry=rhosnmin
+
+        !       density of dry snow (era40)
+
+
+        zdweight=(zsndepth-swsnice(jl)*zsninv)*zsndinv
+        zdweight=max(zdweight,0.0_realkind)
+        zsafe=0.0_realkind
+        if(zdweight<=0.0_realkind) zsafe=1.0_realkind
+
+        zrhodry=(zrhosn-(1.0_realkind-zdweight-zsafe)*rhoh2o)/(zdweight+zsafe)
+
+        zslask=(zsnstp-snice(jl))*zsninv
+        if(zslask>0.0001_realkind)then
+           zrhost=((zsndepth-swsnice(jl)*zsninv)*zrhodry+zslask* &
+                rhosnmin)/(zsndepth-swsnice(jl)*zsninv+ &
+                zsafe+zslask)
+        else
+           zrhost=zrhodry
+        endif
+
+        !         dry snow density at t+1
+
+        zrhodry=(zrhost-rhosnmax)*exp(-taufsn*dtime/tau1sn) +rhosnmax
+
+
+
+        zsafe=1.0_realkind
+        if(zsnicep>0.0_realkind)zsafe=0.0_realkind
+
+        !     new snow density
+
+        zdweight=(1.0_realkind-zsafe)*zsnicep/ (zsnicep+zswsnicep+zsafe)
+        zrhosnicep=zrhodry*zdweight+rhoh2o*(1.0_realkind-zdweight-zsafe)+ &
+             zsafe*zrhosn
+
+        !     zsnicep is updated again with water in the snow
+
+        zsnicep=zsnicep+zswsnicep
+
+
+        !        calculate new snow max value for ice
+
+
+
+        if(snmaxice(jl)>1.e-06_realkind) then
+
+
+
+           if( zsnicep>=snmaxice(jl) )then
+
+              zsnmaxicep=zsnicep
+
+           elseif ( zsnicep<zk1*snmaxice(jl) )  then
+
+              zsnmaxicep=snmaxice(jl)- &
+                   ( zk1*snmaxice(jl)-zsnicep )*(1.0_realkind-zk)/zk1
+              if(zsnmaxicep<1.e-6_realkind)zsnmaxicep=0.0_realkind
+
+           else
+
+              zsnmaxicep=snmaxice(jl)
+
+           endif
+
+           !     this might not be necessary:
+
+           if(zsnicep<=1.e-06_realkind)zsnmaxicep=0.0_realkind
+
+
+
+
+        endif
+
+
+
+
+        !     new snow albedo
+
+        !     ps100507            if(dsnowdt(jl)>1./3600.)then
+        if(dsnowdt(jl)>0.1_realkind/3600.0_realkind)then
+           zalbsnice=albsnmax
+        else
+           if(zsnmel>0.0_realkind)then
+              zalbsnice=(zalbsnice-albsnmin)* &
+                   exp(-taufsn*dtime/tau1sn)+albsnmin
+           elseif(ztsnicep>ztalblim)then
+              ztauasn=(ztsnicep-ztalblim)/(ztmelt-ztalblim)
+              ztauasn=min(1.0_realkind,max(0.0_realkind,ztauasn))*tauasn
+              zalbsnice=zalbsnice-ztauasn*dtime/tau1sn
+           endif
+           !     ps100507 +++++ no change if ztsnicep<-5 degc
+        endif
+
+        zalbsnice=max(zalbsnice,albsnmin)
+
+        if((zswsnice*zsninv+zsnmel)>=((zsnicep-zswsnicep)*zsninv))then
+           zsn2sw=zsnicep
+           zswsnicep=0.0_realkind
+           zsnicep=0.0_realkind
+        endif
+
+
+
+
+     else
+
+
+
+        zsn2sw=0.0_realkind
+        zswsnicep=0.0_realkind
+        zsnicep=zsnstp
+        zrhosnicep=rhosnmin
+        zalbsnice=albsnmax
+        if(snmaxice(jl)>0.0_realkind)then
+           zsn2sw=zsnstp
+           zsnicep=0.0_realkind
+           zsnmaxicep=0.0_realkind
+        endif
+
+
+
+     endif
+
+     !      snow melt water for ice (mm/timestep)     
+     !       snowmeltice(jl)=zsn2sw*rhoh2o
+
+     albsnice(jl)=zalbsnice
+
+
+     !     calculate changes in snowcover for ice
+
+     if(zsnmaxicep<1.e-6_realkind) then
+
+
+        !     zfrsnicep=zfrsnasymp*tanh(300.0_realkind*zsnicep)
+        zslask=max(zxm-zsnicep,0.0_realkind)
+        zfrsnicep=zfact*zsnicep
+        if(zsnicep>zx0)zfrsnicep=zfrsnasymp+zacof*zslask*zslask
+     else
+        zsn0=max(0.0_realkind,zsnicep)
+        if (zsn0>=zsnlim)then
+           zfrsnicep = min ( zsn0/(zsnmaxicep*zsfdist), zfrsnasymp )
+        else
+           zslask = min ( zsnlim/(zsnmaxicep*zsfdist), zfrsnasymp )
+           zfrsnicep=zsn0*zslask/zsnlim
+        endif
+        zfrsnicep=max(0.0_realkind,zfrsnicep)
+        zfrsnicep=min(zfrsnasymp,zfrsnicep)
+     endif
+
+     if(zfrsnicep<zfrlim)zfrsnicep=0.0_realkind
+     if(zfrsnicep>(1.0_realkind-zfrlim))zfrsnicep=zfrsnasymp
+
+     !     if snowcover is increasing, let the new area feel the old no-snow history,
+     !     applied below the snow only
+
+
+     zdsnice=zfrsnicep-frsnice(jl)
+     jq=0
+     if(zdsnice>0.0_realkind) jq=1
+
+     !     here the heat capacity is the same for ice outside and below the snow
+
+     zslask=frsnice(jl)/(zfrsnicep + 1.e5_realkind*real(1-jq,realkind))
+     !     zslask=ro_cgsn*zsnw/(ro_cgsn*zsnw+ro_cgns*zdsnw+
+     !     &       1.e5*real(1-jq))
+     zdweight=real(jq,realkind)*zslask+real(1-jq,realkind)
+
+     zticesnp=zdweight*zticesnp+(1.0_realkind-zdweight)*zticep
+     zticesndp=zdweight*zticesndp+(1.0_realkind-zdweight)*zticedp
+
+     !     if snowcover is decreasing, let the new area feel the old snow history,
+     !     applied outside the snow only
+
+     jq=0
+     if(zdsnice<0.0_realkind) jq=1
+     zslask=frsnice(jl)/(frsnice(jl) - zdsnice + 1.e5_realkind*real(1-jq,realkind))
+     zdweight=real(jq,realkind)*zslask+real(1-jq,realkind)
+
+     zticep=zdweight*zticep + (1.0_realkind-zdweight)*zticesnp
+     zticedp=zdweight*zticedp + (1.0_realkind-zdweight)*zticesndp
+
+
+
+     if(frsnice(jl)<zfrlim)then
+        ztsnicep=zticep
+        zticesnp=zticep
+        zticesndp=zticedp
+
+     endif
+     if((1.0_realkind-frsnice(jl))<zfrlim)then
+        zticep=zticesnp
+        zticedp=zticesndp
+     endif
+
+
+
+     !     put dummy values (and good values) in cases of no ice
+
+     ziceon=1.0_realkind
+     ziceoff=0.0_realkind
+     if(zfrice<=zfrlim)then
+        ziceon=0.0_realkind
+        ziceoff=1.0_realkind
+     endif
+
+     u10mi(jl)=u10mi(jl)*ziceon+zudumout*ziceoff
+     v10mi(jl)=v10mi(jl)*ziceon+zudumout*ziceoff
+     t2mi(jl)=t2mi(jl)*ziceon+ztdumout*ziceoff
+     q2mi(jl)=q2mi(jl)*ziceon+zqdumout*ziceoff
+     rh2mi(jl)=rh2mi(jl)*ziceon+zrhdumout*ziceoff
+
+     zticep=zticep*ziceon + min(tsea(jl),tmelt)*ziceoff
+     zticedp=zticedp*ziceon + min(tsea(jl),tmelt)*ziceoff
+     zticesnp=zticesnp*ziceon + min(tsea(jl),tmelt)*ziceoff
+     zticesndp=zticesndp*ziceon + min(tsea(jl),tmelt)*ziceoff
+     ztsnicep=ztsnicep*ziceon + min(tsea(jl),tmelt)*ziceoff
+     zsnicep=zsnicep*ziceon
+     zswsnicep=zswsnicep*ziceon
+     zsnmaxicep=zsnmaxicep*ziceon
+     zrhosnicep=zrhosnicep*ziceon + rhosnmin*ziceoff
+
+     !     calculate tendencies
+
+     ! compute temperature tendencies only where  lcounttice<>0
+     if (lcounttice(jl)>0.5_realkind) then
+        dticedt(jl)=zrdt*(zticep-tice(jl))
+        dticeddt(jl)=zrdt*(zticedp-ticed(jl))
+        dticesndt(jl)=zrdt*(zticesnp-ticesn(jl))
+        dticesnddt(jl)=zrdt*(zticesndp-ticesnd(jl))
+        dtsnicedt(jl)=zrdt*(ztsnicep-tsnice(jl))
+        dsnicedt(jl)=zrdt*(zsnicep-snice(jl))
+        dswsnicedt(jl)=zrdt*(zswsnicep-swsnice(jl))
+        drhosnicedt(jl)=zrdt*(zrhosnicep-rhosnice(jl))
+        dsnmaxicedt(jl)=zrdt*(zsnmaxicep-snmaxice(jl))
+     else
+        ! ice temperature is read in, make all other temperatures
+        ! equal to tice (snow, deep ice, ice under snow)
+        dticedt(jl)=0.0_realkind
+        dticeddt(jl)=zrdt*(tice(jl)-ticed(jl))
+        dticesndt(jl)=zrdt*(tice(jl)-ticesn(jl))
+        dticesnddt(jl)=zrdt*(tice(jl)-ticesnd(jl))
+        dtsnicedt(jl)=zrdt*(tice(jl)-tsnice(jl))
+        !     kw060321 snow on ice is computed in rco
+        !     kw060321 set tendendies to 0
+        dsnicedt(jl)=zrdt*(zsnicep-snice(jl))
+        dswsnicedt(jl)=zrdt*(zswsnicep-swsnice(jl))
+        drhosnicedt(jl)=zrdt*(zrhosnicep-rhosnice(jl))
+        dsnmaxicedt(jl)=zrdt*(zsnmaxicep-snmaxice(jl))
+     endif                  ! if lcounttice for oasis
+
+
+     !     ----- water balance -----
+
+     if(frice(jl)>=1.0_realkind)then
+
+        !     storage terms
+
+        storage_w(jl)=snice(jl)
+
+        !     flux terms
+        zprec=(draindt(jl)+dsnowdt(jl))*zrsfl
+        !     evaporation fluxes (zevap>0 means that amount of water increases at surface)
+        zevap=frsnice(jl)*zrsfl*zlatfsn/zlatsn
+        !     runoff
+        zruno=zrsfl*(1.0_realkind-frsnice(jl))*(draindt(jl)-zfzbr+zmelbsi)+zsn2sw
+
+        !     total flux of water
+        flux_w(jl)=flux_w(jl) + zprec+zevap-zruno
+
+     endif
+!!$     if(lprint)write(347,'(2i6,30(1pe12.3))')                        &
+!!$          jl,kstep,along(jl),coslat(jl),frland(jl),frice(jl),frsnice(jl), &
+!!$          snice(jl),swsnice(jl),rhosnice(jl),snmaxice(jl),                &
+!!$          draindt(jl),dsnowdt(jl),tsea(jl),                               &
+!!$          tice(jl),ticed(jl),ticesn(jl),ticesnd(jl),tsnice(jl),t2ms(jl),  &
+!!$          t2mi(jl),senfs(jl),latfs(jl),senfi(jl),latfi(jl),albsnice(jl),  &
+!!$          sswri(jl),slwri(jl)                                                   
+
+!!$     if(lprint2)write(348,'(2i6,30(1pe12.3))')                       &
+!!$          jl,kstep,along(jl),coslat(jl),frland(jl),frice(jl),frsnice(jl), &
+!!$          snice(jl),swsnice(jl),rhosnice(jl),snmaxice(jl),                &
+!!$          draindt(jl),dsnowdt(jl),tsea(jl),                               &
+!!$          tice(jl),ticed(jl),ticesn(jl),ticesnd(jl),tsnice(jl),t2ms(jl),  &
+!!$          t2mi(jl),senfs(jl),latfs(jl),senfi(jl),latfi(jl),albsnice(jl),  &
+!!$          sswri(jl),slwri(jl)
+
+30 enddo
+
+  return
+end subroutine slfluxo_surf_sea_ice
+

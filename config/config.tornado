@@ -1,0 +1,67 @@
+
+MPIINCLUDES := #-I/opt/scali/include
+MPILIBS     := #-L/opt/scali/lib64 -lfmpi -lmpi 
+
+# -I/home/sm_towil/local/mpich-1.2.6/intel-8.1/ch_p4/include
+# -L/home/sm_towil/local/mpich-1.2.6/intel-8.1/ch_p4/lib -lfmpich -lmpich
+
+# HGS
+# Possible values: IPC,MPI,NONE
+#
+#HGS_TYPE := MPI
+
+#HDFINCLUDES ?= -I/home/sm_towil/local/include
+#HDFLIBS     ?= -L/home/sm_towil/local/lib  -lmfhdf -ldf -ludport -ljpeg -lz -lm
+
+LAPACKLIBS  := #-L$(MKL_ROOT) -lmkl_lapack -lmkl_em64t -lguide -lpthread
+LAPACKLIBS  := #-L/opt/scali/lib64 -lpthread -lfmpi -lmpi -lsvml -lpthread
+
+FFT         := #-DFFTW3
+FFTINCLUDES := #-I/usr/local/include
+FFTLIBS     := #-L/usr/local/lib64 -lfftw3 
+
+#MACHINECPP := -DHIRLAM -DIA64  -DLINUXPGI -DIS_LITTLE_ENDIAN -DPREC32 -DWORDRECLEN -D_REENTRANT -DGRIB32 $(MPIINCLUDES) $(FFTINCLUDES) $(HDFINCLUDES) $(RCA_INCS)
+
+MACHINECPP := $(DEFINITIONS) $(MPIINCLUDES)
+
+#CRAYDEF := -DNONCRAYF
+
+MPI_SPECIAL := -Nscampi
+MPI_SPECIALDEP := -I/opt/scali/include64
+
+CPP     := /lib/cpp -E -P -traditional
+CC      := icc 
+CCFLAGS := -O2 -DPREC32 -DGPI -funroll-loops $(MPI_SPECIAL) -traceback -g -debug # $(MACHINECPP) 
+
+CXX     := icpc #-I/user/lib/include -lm
+CXXFLAGS := -O3 $(MPI_SPECIAL) # -funroll-loops -traceback -g -debug #-cxxlib=/usr/lib #-g $(MACHINECPP)
+
+FC := ifort 
+
+
+FCFLAGS :=  -traceback -fp-model strict  $(MPI_SPECIAL) -O2 -I$(ROOTDIR)/$(ARCH)/hirmod   -traceback -g -debug -CU -Nscampi #-check bounds
+FCFLAGS_HIR   = $(FCFLAGS)  #-fixed
+FCFLAGS_HIR90 = $(FCFLAGS)  -free
+
+# xlf (IBM/AIX), ifort (Intel/Linux) (and others) always produce
+# a lower-case module name
+ 
+MODNAME = $(shell echo $(*F) | tr "[:upper:]" "[:lower:]")
+MODEXT := mod
+
+LD          := $(FC)
+LD_MPP      := $(FC) $(MPI_SPECIAL) -L/usr/lib/gcc/x86_64-redhat-linux/3.4.6 -lstdc++
+
+#LDFLAGS     := -traceback -lsvml -lirc
+LDFLAGS     :=  -L/opt/scali/lib64 -lsvml 
+
+LDFLAGS_VAR := $(LDFLAGS) $(MPILIBS) $(LAPACKLIBS) $(FFTLIBS)
+LDFLAGS_CMA := $(LDFLAGS) $(MPILIBS) $(LAPACKLIBS)
+LDFLAGS_HIR := $(LDFLAGS) $(MPILIBS) $(LAPACKLIBS) $(FFTLIBS)
+
+AR      := ar
+ARFLAGS := rv
+MV      := mv
+RM      := rm -f
+MKDIR   := mkdir
+RMDIR   := rmdir

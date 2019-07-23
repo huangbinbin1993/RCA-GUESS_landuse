@@ -1,0 +1,445 @@
+  subroutine conv_ecocli(nhor,kstart,kstop,                           &
+       lai_t1,lai_t2,lai_t3,&
+       veg_t1,emis_t1,frland,                             &
+       frac_t2,                             &
+       frac_t3,                          &
+       veg_t2,veg_t3,droot_t1,droot_t2,droot_t3,                       &
+       texture,              &
+       minlai_t1,minlai_t2,minlai_t3,                                  &
+       maxlai_t1,maxlai_t2,maxlai_t3,                                  &
+       tsns4,tsc4,                                               &
+       sw1opl,sw1for,sw2opl,sw2for,sw3opl,sw3for,                      &
+       soil_carb,                                                      &
+       along,coslat,                                                   &
+       vsw_mix1,vsw_mix2,vcc_mix1,vcc_mix2,                            &
+       vfl_mix1,vfl_mix2,psis_mix1,psis_mix2,                          &
+       bw_mix1,bw_mix2,ks_mix1,ks_mix2,                                &
+       zcapdry_mix1,zcapdry_mix2,zcaps_mix1,zcaps_mix2,                &
+       cs_mix1,cs_mix2,cs_min,cs_w,cs_i,                               &
+       frfor,frdecid,vegopl,                                           &
+       laiopn_int,lai_conif,lai_decid,                                 &
+       vegfor,soil3wopl,soil3wfor,                                     &
+       frroot1wopl,frroot1wfor,                                        &
+       frroot2wopl,frroot2wfor,                                        &
+       tsclim_years,emopl)                                                    
+    use confys                                                            
+    use config                                                            
+    use comrpar
+
+    implicit none                                                              
+
+    integer nhor,kstart,kstop,jl                                          
+    real(kind=realkind)  tsns4(nhor),tsc4(nhor)                                   
+
+    real(kind=realkind) laiopn_int(nhor), laiopn_int_loc(nhor)                           
+    real(kind=realkind) lai_conif(nhor),  lai_conif_loc(nhor)                            
+    real(kind=realkind) lai_decid(nhor),  lai_decid_loc(nhor)                            
+    real(kind=realkind) frfor(nhor),      frfor_loc(nhor)                                
+    real(kind=realkind) frdecid(nhor),    frdecid_loc(nhor)                              
+    real(kind=realkind) vegopl(nhor),     vegopl_loc(nhor)                                    
+
+    real(kind=realkind) vegfor(nhor),                                                   &
+         soil3wopl(nhor),soil3wfor(nhor),                                &
+         frroot1wopl(nhor),frroot1wfor(nhor),                            &
+         frroot2wopl(nhor),frroot2wfor(nhor)                              
+    real(kind=realkind) along(nhor),coslat(nhor)                                              
+
+    real(kind=realkind)  lai_t1(nhor),lai_t2(nhor),lai_t3(nhor),&
+         veg_t1(nhor),&
+         emis_t1(nhor),&
+         frland(nhor),&
+         frac_t2(nhor),frac_t3(nhor),          &
+         veg_t2(nhor),veg_t3(nhor),          &
+         droot_t1(nhor),droot_t2(nhor),droot_t3(nhor),&
+         texture(nhor),                                 &
+         minlai_t1(nhor),minlai_t2(nhor),minlai_t3(nhor),                &
+         maxlai_t1(nhor),maxlai_t2(nhor),maxlai_t3(nhor)
+    
+    real(kind=realkind) sw1opl(nhor),sw1for(nhor),sw2opl(nhor),sw2for(nhor),            &
+         sw3opl(nhor),sw3for(nhor),soil_carb(nhor)                             
+
+    !    local variables                                                            
+
+    integer isoil                                                         
+    real(kind=realkind) z3w,zslask,ww,zlim,zalat                                 
+    real(kind=realkind)  zfrrootd,zdrootopl,zdrootfor,                                  &
+         zbetaopl,zbetafor                                                
+    real(kind=realkind) ww1opl,ww1for,ww2opl,ww2for,ww3opl,ww3for,                      &
+         zswa1opl,zswa1for,zswa2opl,zswa2for,zswa3opl,zswa3for            
+    logical ecoclimap                                                     
+    logical lprint6                                                            
+
+
+    real(kind=realkind) tlambdaq,zgamd,zcapdry,zcap0,zcaps                               
+    real(kind=realkind) rho_org1,rho_org2,rho_org_max,fo1,fo2
+    real(kind=realkind) Tcpl,dTc,Cpsf
+    real(kind=realkind) vsw_org,vcc_org,vfl_org,psis_org,bw_org,ks_org,                 &
+         zcapdry_org,zcaps_org                                            
+    real(kind=realkind) vsw_mix1(nhor),vsw_mix2(nhor),vcc_mix1(nhor),vcc_mix2(nhor),    &
+         vfl_mix1(nhor),vfl_mix2(nhor),psis_mix1(nhor),psis_mix2(nhor),  &
+         bw_mix1(nhor),bw_mix2(nhor),ks_mix1(nhor),ks_mix2(nhor),        &
+         zcapdry_mix1(nhor),zcapdry_mix2(nhor),                          &
+         zcaps_mix1(nhor),zcaps_mix2(nhor),                              &
+         cs_mix1(nhor),cs_mix2(nhor),cs_min,cs_org,cs_w,cs_i              
+    real(kind=realkind) tsclim_years(nhor),emopl(nhor) 
+    !    sfdist                                                                
+    !    vsw   total porosity (%)                                              
+    !    vcc   field capacity (m3/m3)                                          
+    !    vfl   wilting point (m3/m3)                                           
+    !    psis  sat. soil matric pot. (m)                                       
+    !    bw    clapp and hornberger exponent, (b-parameter)                    
+    !    ks    sat. hyd. cond. (m/s)                                                
+
+    !    minimum depth of 3rd soil layer is set to 5 cm                        
+    z3w=0.05_realkind                                                              
+    zlim=0.001_realkind                                                            
+    zfrrootd=0.99_realkind                                                              
+
+    !    carb/organic soil                                                     
+    !    method based on lawrence etal 07                                      
+    !    values based on lawrence etal 07, letts etal 00 and zinke etal 86          
+
+    !    --- constants                                                         
+    rho_org_max=130._realkind       ! max organic soil denisty [kg/m3]          
+    vsw_org=0.9_realkind            ! porosity for undecomposed organic soil [  ]
+    vcc_org=0.3_realkind            ! field capacity for undecomposed organic s oil [ ]
+    vfl_org=0.04_realkind           ! volumetric wilting point [ ]              
+    psis_org=0.0103_realkind        ! saturated soil matric potential [m]       
+    bw_org=2.7_realkind            ! clapp and hornberg exponent [ ]           
+    ks_org=100._realkind            ! saturated conductivity [*10**-6 m/s]      
+    zcapdry_org=0.05_realkind       ! thermal conductivity of dry organic soil  [w/(m k)]
+    zcaps_org=0.25_realkind         ! thermal conductivity of organic soil soli ds [w/(m k)]
+    cs_org=2.5e6_realkind           ! heat capacity of organic soil solids [j/( m3 k)]
+
+    !    --- quartz heat conductivity                                          
+    tlambdaq=7.7_realkind           ! [w/(m k)]                
+
+    zcap0=3._realkind              ! heat cond of other mineral soilids (not q uartz)
+
+    !    --- heat capacity of mineral soil solids                              
+    cs_min=1.942e6_realkind         ! [j/(m3 k)] peters-lidard                       
+
+    !    --- other heat capacities                                             
+    cs_i=1.883e6_realkind           ! heat capacity of ice   [j/(m3 k)] peters- lidard
+    cs_w=4.186e6_realkind          ! heat capacity of water [j/(m3 k)] peters-      lidard
+
+    ecoclimap=.true.                                                           
+
+    do 40 jl=kstart,kstop                                                      
+
+       zalat=acos(coslat(jl))*180._realkind/3.141592654_realkind                                 
+
+       !    fraction of forest in the grid square                                      
+
+       frfor_loc(jl)=(frac_t2(jl)+frac_t3(jl))*frland(jl)                      
+
+       !    fraction of forest that is decidious forest                                
+
+       frdecid_loc(jl)=frac_t3(jl)/max(frac_t2(jl)+frac_t3(jl),          &
+            zlim)                                                              
+
+       !    vegetation cover                                                           
+
+       vegopl_loc(jl)=veg_t1(jl)                                          
+       vegfor(jl)=veg_t2(jl)*(1.0_realkind-frdecid_loc(jl))+   &
+            veg_t3(jl)*frdecid_loc(jl)                                         
+
+       isoil=nint(texture(jl))                                                 
+
+       if(isoil< 1 .or. isoil> 12) then                             
+          isoil=6                                                         
+       endif
+
+       !    mineral soil thermal properties                                            
+
+       !    --- density dry mineral soil                                          
+       zgamd=(1._realkind-vsw(isoil))*2700._realkind                                        
+
+       !    --- heat conductivity dry mineral soil                                
+       zcapdry=(0.135_realkind*zgamd+64.7_realkind)/(2700._realkind-0.947_realkind*zgamd)                          
+
+       !    --- heat conductivity of mineral soil solids (zcaps)                  
+       if(cquartz(isoil)>0.2_realkind)zcap0=2._realkind                                  
+       zcaps=tlambdaq**cquartz(isoil) * zcap0**(1._realkind-cquartz(isoil))             
+
+       !    --- soil carbon density and fraction of organic soil                  
+       !    density of organic soil in layer dz1w and dz2w. factors 0.43 and 0.22 r elates
+       !    to the vertical distribution of organic matter. organic matter is distrubuted
+       !    with decreasing density with depth in the top 28 cm (dz1w+dz2w) of the soil. more
+       !    accurate would be to distribute organic matter through the upper 1 m profile.
+       !    values 0.43 and 0.22 are approximated based on carbon density profiles reported
+       !    by zinke etal 1986.the remaining fraction=1-0.43-0.22=0.35 should be distributed
+       !    in the 0.28 to 1 m soil profile but is not done because it was much simpler to
+       !    only distribute in the top 28 cm profile.                                  
+
+       !    high lat areas: decreasing carbon density with depth (see below)      
+       !    'non high lat' areas: uniform distribution of carbon with depth (see below)
+
+       !    --- method 1) for high lat organic soils. density of organic matter is 
+       !    high in upper soil layers and decreases with depth.                   
+       !    eg alaska, siberia and tundra areas (zinke etal 1986)                 
+       !    rho_org1=0.43*soil_carb(jl)/dz1w ! density of organic matter in dz1w    
+       !    rho_org2=0.22*soil_carb(jl)/dz2w ! density of organic matter in dz2w         
+
+       !    --- method 2) for 'non high lat' areas. density of organic matter has a
+       !    uniform distribution with depth. (zinke etal 1986)                    
+       !    rho_org1=soil_carb(jl) ! density of organic matter in dz1w             
+       !    rho_org2=soil_carb(jl) ! density of organic matter in dz2w                  
+
+       !    --- method 3) a combo method. if soil_carb > 20 then method 1, else   
+       !    use method 2. this method will provide more carbon in the upper       
+       !    layers when we have a lot of soil carbon, ie mainly in high lat       
+       !    areas. other areas will have a uniform distribution of soil carbon    
+       !    with depth. the limit of 20 is based on visual inspection of          
+       !    soil_carbon maps with different 'mask out' limits.                    
+       !    rho_org1=soil_carb(jl)          ! density of organic matter in dz1w    
+       !    rho_org2=soil_carb(jl)          ! density of organic matter in dz2w    
+       !    if(soil_carb(jl)> 20.) then                                        
+       !    rho_org1=0.43*soil_carb(jl)/dz1w ! density of organic matter in dz1w    
+       !    rho_org2=0.22*soil_carb(jl)/dz2w ! density of organic matter in dz2w    
+       !    endif                                                                 
+
+       !    --- method 4) uses mean annual climate to divide between uniform and  
+       !    non-uniform vertical carbon distribution. mean climate hear is        
+       !    the 1960-1990 (complete decades) mean t2m. this method is based       
+       !    on the assumption that regions with cold mean annual climate have      
+       !    a 'boreal(kind=realkind) arctic' vertical distribution of soil carbon, ie decreasing 
+       !    carb content with depth while all other areas have a uniform carbon   
+       !    distribution. based on visual inspection of the mean annual climate we
+       !    choose t2m<278.15 to be the limit for 'boreal arctic' distribution.   
+       !                                                                          
+       if(lcarb)then
+
+          Tcpl=278.15_realkind   ! temp carb profile limit
+          dTc=4._realkind        ! temp range for weighting carb profiles
+          rho_org1=soil_carb(jl) ! density of organic matter in dz1w          
+          rho_org2=soil_carb(jl) ! density of organic matter in dz2w          
+          
+         !if(tsclim_years(jl)< 278.15_realkind) then
+          if(tsclim_years(jl)<Tcpl+dTc*0.5_realkind) then
+             rho_org1=0.43_realkind*soil_carb(jl)/dz1w ! density of organic matter in  dz1w
+             rho_org2=0.22_realkind*soil_carb(jl)/dz2w ! density of organic matter in  dz2w
+             
+             Cpsf=(Tcpl+dTc*0.5_realkind-tsclim_years(jl))/dTc ! carb profile scale factor
+             Cpsf=min(max(0._realkind,Cpsf),1._realkind) 
+             
+             rho_org1=rho_org1*Cpsf+soil_carb(jl)*(1-Cpsf)
+             rho_org2=rho_org2*Cpsf+soil_carb(jl)*(1-Cpsf)
+             
+          endif
+
+          rho_org1=min(rho_org1,130._realkind) ! limit max org denisty to 130 kg/m3   
+          rho_org2=min(rho_org2,130._realkind) ! based on litterature value           
+          
+          fo1=rho_org1/rho_org_max ! fraction of organic matter in dz1w       
+          fo2=rho_org2/rho_org_max ! ...                           dz2w            
+
+          fo1=min(max(fo1,0._realkind),1._realkind) 
+          fo2=min(max(fo2,0._realkind),1._realkind) 
+
+         !    for test runs: use 0 for runs without soil carb influence         
+         !                   use 1 for maximum soil carb influence                                 
+
+       else
+         fo1=0._realkind
+         fo2=0._realkind
+       endif
+
+       !  fo1_out(jl)=fo1                                                    
+       !  fo2_out(jl)=fo2                                                         
+       
+       lprint6=.false.                                                    
+
+       !    --- weighted soil properties by fraction of organic matter in soil.  
+       !    soil properties represents a mix of mineral and organic properties.   
+       !    method taken from lawrence etal 07.                                   
+       vsw_mix1(jl)=(1._realkind-fo1)*vsw(isoil)+fo1*vsw_org ! porosity, dz1w       
+       vsw_mix2(jl)=(1._realkind-fo2)*vsw(isoil)+fo2*vsw_org ! ...     , dz2w       
+
+       vcc_mix1(jl)=(1._realkind-fo1)*vcc(isoil)+fo1*vcc_org ! field capacity, dz1w 
+       vcc_mix2(jl)=(1._realkind-fo2)*vcc(isoil)+fo2*vcc_org ! ...           , dz2w 
+
+       vfl_mix1(jl)=(1._realkind-fo1)*vfl(isoil)+fo1*vfl_org ! wilting point, dz1w  
+       vfl_mix2(jl)=(1._realkind-fo2)*vfl(isoil)+fo2*vfl_org ! ...          , dz2w  
+
+       psis_mix1(jl)=(1._realkind-fo1)*psis(isoil)+fo1*psis_org ! sturated soil ma tric potential, dz1w
+       psis_mix2(jl)=(1._realkind-fo2)*psis(isoil)+fo2*psis_org ! ...                            , dz2w
+
+       bw_mix1(jl)=(1._realkind-fo1)*bw(isoil)+fo1*bw_org ! clapp and hornberg exp onent, dz1w
+       bw_mix2(jl)=(1._realkind-fo2)*bw(isoil)+fo2*bw_org ! ...                         , dz2w
+
+       ks_mix1(jl)=(1._realkind-fo1)*ks(isoil)+fo1*ks_org ! saturated conductivity , dz1w
+       ks_mix2(jl)=(1._realkind-fo2)*ks(isoil)+fo2*ks_org ! ...                         , dz2w
+
+       zcapdry_mix1(jl)=(1._realkind-fo1)*zcapdry+fo1*zcapdry_org ! thermal cond d ry soil, dz1w
+       zcapdry_mix2(jl)=(1._realkind-fo2)*zcapdry+fo2*zcapdry_org ! ...                        , dz2w
+
+       zcaps_mix1(jl)=(1._realkind-fo1)*zcaps+fo1*zcaps_org ! thermal cond solids,  dz1w
+       zcaps_mix2(jl)=(1._realkind-fo2)*zcaps+fo2*zcaps_org ! ...                ,       dz2w
+
+       cs_mix1(jl)=(1._realkind-fo1)*cs_min+fo1*cs_org ! heat capacity solids, dz1w 
+       cs_mix2(jl)=(1._realkind-fo2)*cs_min+fo2*cs_org ! ...                 , dz2w      
+
+
+       ww1opl=sw1opl(jl)/dz1w  
+       ww1opl=min(max(ww1opl,vfl_mix1(jl)),vcc_mix1(jl)) 
+       ww1for=sw1for(jl)/dz1w                                              
+       ww1for=min(max(ww1for,vfl_mix1(jl)),vcc_mix1(jl)) 
+       ww2opl=sw2opl(jl)/dz1w                                              
+       ww2opl=min(max(ww2opl,vfl_mix2(jl)),vcc_mix2(jl)) 
+       ww2for=sw2for(jl)/dz1w                                              
+       ww2for=min(max(ww2for,vfl_mix2(jl)),vcc_mix2(jl)) 
+       ww3opl=sw3opl(jl)/dz1w                                              
+       ww3opl=min(max(ww3opl,vfl(isoil)),vcc(isoil))                      
+       ww3for=sw3for(jl)/dz1w                                              
+       ww3for=min(max(ww3for,vfl(isoil)),vcc(isoil))                           
+
+       zswa1opl=(ww1opl-vfl_mix1(jl))/(vcc_mix1(jl)-vfl_mix1(jl)) 
+       zswa1for=(ww1for-vfl_mix1(jl))/(vcc_mix1(jl)-vfl_mix1(jl)) 
+       zswa2opl=(ww2opl-vfl_mix2(jl))/(vcc_mix2(jl)-vfl_mix2(jl)) 
+       zswa2for=(ww2for-vfl_mix2(jl))/(vcc_mix2(jl)-vfl_mix2(jl)) 
+       zswa3opl=(ww3opl-vfl(isoil))/(vcc(isoil)-vfl(isoil))               
+       zswa3for=(ww3for-vfl(isoil))/(vcc(isoil)-vfl(isoil))                    
+
+       emopl(jl)=emis_t1(jl)
+!       if( (isoil==2 .or. isoil==9 .or. isoil==6) .and. veg_t1(jl)<0.1_realkind  )then
+       if( (isoil==2) .and. veg_t1(jl)<0.1_realkind  )then
+         emopl(jl)=0.85_realkind*(1._realkind - zswa1opl) + 0.95_realkind*zswa1opl
+       endif
+
+       !    root depth                                                                 
+
+       zdrootopl=max(droot_t1(jl),dz1w+dz2w+z3w)                            
+       !    ps090404        zdrootfor=max(max(droot_t2(jl),droot_t3(jl)),dz1w+dz2w+ z3w)
+       zdrootfor=max(max(droot_t2(jl),droot_t3(jl)),dz1w+dz2w+1.218_realkind)             
+
+       !    depth of 3rd soil layer wrt water                                     
+       !    minimized to 5 cm                                                          
+
+       soil3wopl(jl)=zdrootopl-dz1w-dz2w                                    
+       soil3wfor(jl)=zdrootfor-dz1w-dz2w                                         
+
+       !    root profile based on                                                 
+       !    jackson et al., 1996: a global analysis of root distribution          
+       !    for terrestial biomes, oecologia 108, 389-411                         
+       !                                                                          
+       !    root fraction y over depth d (cm) is given by the depth               
+       !    coefficient beta (global mean = 0.966):                               
+       !    y=1-beta**d                                                           
+       !    here beta is calculated assuming that the fraction zfrrootd           
+       !    of the roots occupy the root depth given by ecoclimap                      
+
+       zbetaopl=(1._realkind-zfrrootd)**(1._realkind/zdrootopl/100._realkind)                        
+       zbetafor=(1._realkind-zfrrootd)**(1._realkind/zdrootfor/100._realkind)                             
+
+       zbetaopl=min(zbetaopl,0.975_realkind)                                       
+       zbetafor=min(zbetafor,0.975_realkind)                                            
+
+       !    fraction of roots that occupy the soil layers                              
+
+       frroot1wopl(jl)=1._realkind-zbetaopl**(dz1w*100._realkind)                            
+       frroot1wopl(jl)=min(max(frroot1wopl(jl),zlim),1._realkind)                       
+
+       !    ps        zslask=(1.-zswa1opl)**2.*frroot1wopl(jl)                    
+       zslask=(1._realkind-zswa1opl)**1._realkind*frroot1wopl(jl)                           
+       frroot1wopl(jl)=frroot1wopl(jl)-zslask                                  
+
+       frroot2wopl(jl)=1._realkind-zbetaopl**((dz1w+dz2w)*100._realkind)-                    &
+            frroot1wopl(jl)                                               
+       frroot2wopl(jl)=min(max(frroot2wopl(jl),zlim),1._realkind)                       
+
+       frroot2wopl(jl)=frroot2wopl(jl)+zslask                             
+       frroot2wopl(jl)=min(max(frroot2wopl(jl),zlim),1._realkind)                  
+       !    ps        zslask=(1.-zswa2opl)**2.*frroot2wopl(jl)                    
+       zslask=(1._realkind-zswa2opl)**1._realkind*frroot2wopl(jl)                           
+       frroot2wopl(jl)=frroot2wopl(jl)-zslask                                  
+
+       !    frroot3wopl(jl)=1.-frroot1wopl(jl)-frroot2wopl(jl)                         
+
+       frroot1wfor(jl)=1._realkind-zbetafor**(dz1w*100._realkind)                            
+       frroot1wfor(jl)=min(max(frroot1wfor(jl),zlim),1._realkind)                       
+
+       !    ps        zslask=(1.-zswa1for)**2.*frroot1wfor(jl)                    
+       zslask=(1._realkind-zswa1for)**1._realkind*frroot1wfor(jl)                           
+       frroot1wfor(jl)=frroot1wfor(jl)-zslask                                  
+
+       frroot2wfor(jl)=1._realkind-zbetafor**((dz1w+dz2w)*100._realkind)-                    &
+            frroot1wfor(jl)                                               
+       frroot2wfor(jl)=min(max(frroot2wfor(jl),zlim),1._realkind)                       
+
+       frroot2wfor(jl)=frroot2wfor(jl)+zslask                             
+       frroot2wfor(jl)=min(max(frroot2wfor(jl),zlim),1._realkind)                  
+       !    ps        zslask=(1.-zswa2for)**2.*frroot2wfor(jl)                    
+       zslask=(1._realkind-zswa2for)**1._realkind*frroot2wfor(jl)                           
+       frroot2wfor(jl)=frroot2wfor(jl)-zslask                                  
+
+       !    frroot3wfor(jl)=1.-frroot1wfor(jl)-frroot2wfor(jl)                         
+
+       !    use annual cycle of lai according to ecoclimap                        
+       if(ecoclimap)then                                                       
+
+          laiopn_int_loc(jl)=lai_t1(jl)                                   
+          lai_conif_loc(jl)=lai_t2(jl)                                    
+          lai_decid_loc(jl)=lai_t3(jl)                                         
+
+          !    use min and max lai from ecoclimap and calculate specific             
+          !    lai from soil temperature in layer 4 (hageman, 19xx) and              
+          !    soil moisture availability in layer 2.                                
+       else                                                               
+          zslask=(293._realkind-tsns4(jl))/(293._realkind-273._realkind)                             
+          zslask=1._realkind-zslask*zslask                                         
+          zslask=min(1._realkind,max(0._realkind,zslask))                                   
+          laiopn_int_loc(jl)=minlai_t1(jl)+zslask*                       &
+               (maxlai_t1(jl)-minlai_t1(jl))                                   
+
+          !    ps090513                                                              
+          !    ps         zslask=1.-(1.-zswa2opl)**3.                                
+          zslask=0.5_realkind*( sin(pi*((zswa2opl-1.0_realkind)**2._realkind+ &
+               0.5_realkind ))+1._realkind )              
+          laiopn_int_loc(jl)=zslask*(laiopn_int_loc(jl)-minlai_t1(jl))+  &
+               minlai_t1(jl)                                              
+          !    ps090513                                                              
+          zslask=(293._realkind-tsc4(jl))/(293._realkind-273._realkind)                              
+          zslask=1._realkind-zslask*zslask                                         
+          zslask=min(1._realkind,max(0._realkind,zslask))                                   
+          lai_conif_loc(jl)=minlai_t2(jl)+zslask*                        &
+               (maxlai_t2(jl)-minlai_t2(jl))                                   
+
+          lai_decid_loc(jl)=minlai_t3(jl)+zslask*                        &
+               (maxlai_t3(jl)-minlai_t3(jl))                                   
+
+          !    ps090513                                                              
+          !    ps         zslask=1.-(1.-zswa2for)**3.                                
+          zslask=0.5_realkind*( sin(pi*( (zswa2for-1.0_realkind)**2._realkind &
+               +0.5_realkind ))+1._realkind )              
+          lai_conif_loc(jl)=zslask*(lai_conif_loc(jl)-minlai_t2(jl))+    &
+               minlai_t2(jl)                                              
+          lai_decid_loc(jl)=zslask*(lai_decid_loc(jl)-minlai_t3(jl))+    &
+               minlai_t3(jl)                                              
+          !    ps090513                                                                   
+
+          laiopn_int_loc(jl)=min(maxlai_t1(jl),                          &
+               max(minlai_t1(jl),laiopn_int_loc(jl)))                     
+          lai_conif_loc(jl)=min(maxlai_t2(jl),                           &
+               max(minlai_t2(jl),lai_conif_loc(jl)))                      
+          lai_decid_loc(jl)=min(maxlai_t3(jl),                           &
+               max(minlai_t3(jl),lai_decid_loc(jl)))
+
+       endif
+
+40  enddo
+
+
+    if(.not.use_guess)then
+       laiopn_int= laiopn_int_loc
+       lai_conif=  lai_conif_loc 
+       lai_decid=  lai_decid_loc 
+       frfor=      frfor_loc     
+       frdecid=    frdecid_loc   
+       vegopl=     vegopl_loc      
+    endif
+
+
+    return
+  end subroutine conv_ecocli
+

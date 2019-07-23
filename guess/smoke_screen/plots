@@ -1,0 +1,90 @@
+#!/bin/bash
+
+# Parameters from command line
+start_year=$1
+end_year=$2
+
+# Function for plotting a time series
+function plot {
+    local title=$1
+    local xtitle=$2
+    local ytitle=$3
+    local datafile=$4
+    local image=$5
+
+    cat <<EOF | gnuplot &>/dev/null
+set title "${title}"
+set xlabel "${xtitle}"
+set ylabel "${ytitle}"
+set key on
+set grid ytics
+set terminal png
+set output "${image}"
+plot "${datafile}" with lines
+EOF
+}
+
+# Create a temporary directory for working in
+temp_dir=$(mktemp -d)
+
+# We get all files from present working directory,
+# so remember it before going to the temp_dir
+input=$(pwd)
+
+pushd $temp_dir
+
+# Run tslice and aslice on the variables we're interested in
+for var in mwcont_lower mwcont_upper cmass lai anpp; do 
+    tslice $input/sim_${var}_0.out -f $start_year -t $end_year -o sim_${var}_${start_year}-${end_year}.txt
+    aslice $input/sim_${var}_0.out -o sim_${var}.txt
+done
+
+# Add AVG column to wcont
+add_avg='
+NR==1 {print $0, " AVG" } 
+NR>1 {
+  sum = 0
+  for (i = 0; i < 12; i++) {
+    sum += $(NF-i)
+  }
+  print $0, sum/12.0
+}
+' 
+
+awk "$add_avg" sim_mwcont_upper_${start_year}-${end_year}.txt > tmp.txt
+mv tmp.txt sim_mwcont_upper_${start_year}-${end_year}.txt
+
+awk "$add_avg" sim_mwcont_upper.txt > tmp.txt
+mv tmp.txt sim_mwcont_upper.txt
+
+awk "$add_avg" sim_mwcont_lower_${start_year}-${end_year}.txt > tmp.txt
+mv tmp.txt sim_mwcont_lower_${start_year}-${end_year}.txt
+
+awk "$add_avg" sim_mwcont_lower.txt > tmp.txt
+mv tmp.txt sim_mwcont_lower.txt
+
+# Extract data for plotting
+awk 'NR>1 {print $1, $NF}' sim_cmass.txt > cmass_plot.txt
+awk 'NR>1 {print $1, $NF}' sim_lai.txt > lai_plot.txt
+awk 'NR>1 {print $1, $NF}' sim_mwcont_upper.txt > wcont_plot.txt
+awk 'NR>1 {print $1, $NF}' sim_anpp.txt > anpp_plot.txt
+
+# Plot the time series
+plot "CMASS" "Year" "cmass" cmass_plot.txt cmass_ts.png
+plot "LAI" "Year" "lai" lai_plot.txt lai_ts.png
+plot "WCONT" "Year" "wcont" wcont_plot.txt wcont_ts.png
+plot "ANPP" "Year" "anpp" anpp_plot.txt anpp_ts.png
+
+# Draw the maps
+gmap sim_mwcont_upper_${start_year}-${end_year}.txt -o wcont_upper.png -seps -i AVG -pixsize 0.5 0.5 -pixoffset 0.25 0.25 -s -c DRY WET
+gmap sim_cmass_${start_year}-${end_year}.txt -o cmass.png -i Total -pixsize 0.5 0.5 -pixoffset 0.25 0.25 -s -c VEGETATION
+gmap sim_lai_${start_year}-${end_year}.txt -o lai.png -i Total -pixsize 0.5 0.5 -pixoffset 0.25 0.25 -s -c VEGETATION
+gmap sim_anpp_${start_year}-${end_year}.txt -o anpp.png -i Total -pixsize 0.5 0.5 -pixoffset 0.25 0.25 -s -c VEGETATION
+
+popd
+
+# Get all the pictures
+cp ${temp_dir}/*.png .
+
+# Clean up
+rm -r $temp_dir
